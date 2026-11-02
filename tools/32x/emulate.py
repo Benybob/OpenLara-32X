@@ -191,6 +191,8 @@ def main():
                         'raster_ft':read_symbol('_gRasterTestFT'),
                         'raster_gt':read_symbol('_gRasterTestGT'),
                         'raster_done':read_symbol('_gRasterTestDone'),
+                        'raster_shade_cases':read_symbol('_gRasterTestShadeCases'),
+                        'raster_shades':read_symbol('_gRasterTestShades'),
                         'math_errors':read_symbol('_gRasterTestMathErrors'),
                         'worker_mode':read_symbol('_gMarsWorkerMode'),
                         **{n:read_symbol('_gMarsWorker'+n) for n in ('Jobs','Used','Stale','Late','Faults','Backend','VerifyErrors','CDJobs','TestCases','TestErrors','TestDone','TestFrames')},

@@ -50,7 +50,12 @@ enum FaceType {
 
 extern Level level;
 
-extern "C" { ALIGN16 uint16 gLightmapPairs[256 * 32]; }
+// GT normalizes the renderer's shade range 1..32 to 0..31. The linker
+// aligns (table + 256), letting its half-address share the shade accumulator.
+extern "C" {
+    __attribute__((section(".lightmap_pairs"), aligned(16)))
+    uint16 gLightmapPairs[256 * 32];
+}
 
 ViewportRel viewportRel;
 Vertex* gVerticesBase;

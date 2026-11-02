@@ -50,8 +50,10 @@ Settings persistence remains unimplemented. Sound effects work on the standalone
 Performance changes preserve the existing 320×224 output, two-pixel horizontal
 texture sampling, draw distance, and dual-CPU polygon scheduling. The textured
 flat-textured scanline loop processes eight pixel pairs per iteration, with
-four pairs in the Gouraud-textured loop. Short spans and tails retain the pair
-loop. A 16 KiB table stores duplicated shade bytes to remove per-pair expansion.
+eight pairs in the Gouraud-textured loop. Short spans and tails retain the pair
+loop. A shared 16 KiB table stores duplicated shade bytes to remove per-pair expansion
+in both loops. Encoded shades 1–32 are normalized to rows 0–31;
+`table + 256` is aligned to 16 KiB for exact fixed-point Gouraud lookup; linker assertions enforce this and the reserved stacks.
 `CPPFLAGS=-DMARS_TEXTURE_PAIRS=4` selects the smaller flat-textured unroll. Clipping uses the SH-2's signed
 hardware divider, and sprites reuse their projection reciprocal. Sprite and
 glyph submissions now consume two vertices instead of accidentally consuming
@@ -87,7 +89,8 @@ does not compete with audio DMA on the tested PicoDrive core. Console reset
 stops both DMA channels and PWM before reinitializing memory. A fresh CD boot
 acknowledgement prevents reusing stale readiness state after reset.
 
-See [the CPU worker report](../../../docs/32x/cpu-workers.md), the
+See [the latest shading comparison](../../../docs/32x/shading-performance.md),
+[the CPU worker report](../../../docs/32x/cpu-workers.md), the
 [audio/performance comparison](../../../docs/32x/audio-performance.md), and the
 [earlier renderer-only report](../../../docs/32x/report.md).
 
@@ -122,11 +125,14 @@ python3 tools/32x/compare_runs.py /tmp/original/run.json /tmp/improved/run.json
 ```
 
 To run the on-target raster regression test, clean and rebuild with
-`CPPFLAGS=-DMARS_RASTER_SELFTEST`, then run for 1500 video frames. The test stops
+`CPPFLAGS=-DMARS_RASTER_SELFTEST`, then run for 3600 video frames. The test stops
 normal gameplay after initialization, executes 2,556 textured/Gouraud span cases
 and 4,096 signed division comparisons, and leaves result symbols in SDRAM.
 Expected FT hash: `1300929039`; GT hash: `1388686019`; done: `1`; math errors:
-`0`. The same build also decodes all 592,276 effect samples: expected audio
+`0`. Another 5,112 boundary-shade cases (encoded shades 1/32, ascending/descending
+gradients, all span widths and odd endpoints) must produce `raster_shades=3137317167`.
+All 7,668 raster cases match the pinned upstream implementation.
+The same build also decodes all 592,276 effect samples: expected audio
 hash `1623845143`, audio done `1`. The hash matches an independent IMA decoder.
 The new mixer also matches the previous sample-major mixer in 320 cases with
 zero errors and hash `4267401245`.

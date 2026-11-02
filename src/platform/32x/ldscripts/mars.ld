@@ -86,12 +86,20 @@ SECTIONS {
 	_sdata = SIZEOF (.data);
  __data_size = SIZEOF(.data);
 
-	.bss 0x06000000 + SIZEOF(.data) :
+	.bss 0x06000000 + SIZEOF(.data) (NOLOAD) :
 	{
 		__bss_start = . ;
 		*(.shbss)
-		*(.bss .bss.*)
+		*(EXCLUDE_FILE (*common.o) .bss .bss.*)
 		*(COMMON)
+        /* Half of (table + 256) shares an accumulator with shade bits 8..12.
+         * Bias before alignment avoids allocating a mostly empty prefix.
+         * Baseline/test builds without this table do not need the padding. */
+        . = DEFINED(_gLightmapPairs) ? ALIGN(ABSOLUTE(.) + 256, 16384) - 256 : ABSOLUTE(.);
+        *(.lightmap_pairs)
+        /* Leave the large common state after the table, so small test/debug
+         * additions do not push alignment to the next 16 KiB boundary. */
+        *common.o(.bss .bss.*)
 		__bss_end = ALIGN(4);
  _end = ALIGN(8);
 		__end = _end;
@@ -105,3 +113,6 @@ SECTIONS {
 }
 
 ASSERT(__bss_end <= 0x0603E800, "32X SDRAM overlaps reserved stacks")
+
+PROVIDE(_gLightmapPairsHalf = (_gLightmapPairs + 256) / 2);
+ASSERT(DEFINED(_gLightmapPairs) ? (((_gLightmapPairs + 256) & 16383) == 0) : 1, "GT lightmap base alignment")

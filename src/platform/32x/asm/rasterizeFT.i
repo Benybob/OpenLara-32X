@@ -221,10 +221,12 @@ _rasterizeFT_asm:
         shlr16  Lptr            // Lptr = (Lx >> 16)
         shlr16  Rptr            // Rptr = (Rx >> 16)
         cmp/gt  Lptr, Rptr      // if (!(Rptr > Lptr)) skip zero length scanline
-        bf/s    .scanline_end_ft
-
-        // iw = divTable[Rptr - Lptr]
+        bt/s    .scanline_nonempty_ft
         mov     Rptr, tmp       // [delay slot]
+        bra     .scanline_end_ft
+        nop
+.scanline_nonempty_ft:
+        // iw = divTable[Rptr - Lptr]
         sub     Lptr, tmp
         shll    tmp
         mov.w   @(tmp, divLUT), iw
@@ -288,8 +290,8 @@ _rasterizeFT_asm:
         mov.b   @(index, TILE), index
         shll    index
         mov.w   @(index, LMAP), index
+        sub     dtdx, t         // Fill the shade-load delay before its store.
         mov.w   index, @-Rptr
-        sub     dtdx, t
         .endr
         cmp/gt  Lptr, Rptr
         bt      .block_8px_ft

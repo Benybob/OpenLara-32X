@@ -122,6 +122,7 @@ _rasterizeGT_asm:
         mov.b   @(VERTEX_G, Lv), tmp
         mov.l   @(VERTEX_T, Lv), Lt
         mov     tmp, Lg
+        add     #-1, Lg        // Encoded shades 1..32 become rows 0..31.
         mov.w   @(VERTEX_X, Lv), tmp
           shll8   Lg
         swap.w  tmp, Lx         // Lx = L->v.x << 16
@@ -141,6 +142,7 @@ _rasterizeGT_asm:
         muls.w  ih, tmp
           mov.b   @(VERTEX_G, L), tmp
         sts     MACL, Ldx
+          add     #-1, tmp
           shll8   tmp
         mov.l   Ldx, @(SP_LDX, sp)
 
@@ -182,6 +184,7 @@ _rasterizeGT_asm:
         mov.b   @(VERTEX_G, Rv), tmp
         mov.l   @(VERTEX_T, Rv), Rt
         mov     tmp, Rg
+        add     #-1, Rg
         mov.w   @(VERTEX_X, Rv), tmp
           shll8   Rg
         swap.w  tmp, Rx         // Rx = R->v.x << 16
@@ -201,6 +204,7 @@ _rasterizeGT_asm:
         muls.w  ih, tmp
           mov.b   @(VERTEX_G, R), tmp
         sts     MACL, Rdx
+          add     #-1, tmp
           shll8   tmp
         mov.l   Rdx, @(SP_RDX, sp)
 
@@ -219,8 +223,9 @@ _rasterizeGT_asm:
         nop
 .calc_right_end_gt:
 
-        // bake gLightmap address into g value
-        mov.l   var_LMAP_ADDR, tmp
+        // Embed half the aligned pair-table address, keeping 8-bit shade fractions.
+        // Doubling the masked address below selects the duplicated-color row.
+        mov.l   var_LMAP_PAIRS_gt, tmp
         or      tmp, Lg
         or      tmp, Rg
 
@@ -298,15 +303,19 @@ _rasterizeGT_asm:
         mov.b   @(index, TILE), index
         mov     Lg, LMAP
         and     mask, LMAP
-        mov.b   @(index, LMAP), index
+        shll    LMAP
+        shll    index
+        mov.w   @(index, LMAP), index
 
         mov.b   index, @Lptr
         add     #1, Lptr
 
         mov     #1, tmp         // tmp = 1 (for align_right)
         cmp/gt  Lptr, Rptr
-        bf/s    .scanline_end_gt
+        bt/s    .align_right_gt
         tst     tmp, Rptr
+        bra     .scanline_end_gt
+        nop
 
 .align_right_gt:
         bt/s    .block_prepare_gt
@@ -316,41 +325,44 @@ _rasterizeGT_asm:
         mov.b   @(index, TILE), index
         and     mask, LMAP
         sub     dgdx, g
-        mov.b   @(index, LMAP), index
+        shll    LMAP
+        shll    index
+        mov.w   @(index, LMAP), index
 
         sub     dtdx, t
 
         mov.b   index, @-Rptr
 
         cmp/gt  Lptr, Rptr
-        bf/s    .scanline_end_gt
+        bt      .block_prepare_gt
+        bra     .scanline_end_gt
+        nop
 
 .block_prepare_gt:
-        shll    dtdx            // [delay slot] optional
+        shll    dtdx
         shll    dgdx
 
         // Preserve the original texture and shade sample for each pixel pair.
-        add     #6, Lptr
+        add     #14, Lptr
         cmp/gt  Lptr, Rptr
         bf      .block_tail_gt
-.block_8px_gt:
-        .rept 4
+.block_16px_gt:
+        .rept 8
         getUV   t, index
         mov.b   @(index, TILE), index
         mov     g, LMAP
         and     mask, LMAP
-        mov.b   @(index, LMAP), index
+        shll    LMAP
+        shll    index
+        mov.w   @(index, LMAP), index
         sub     dgdx, g
-        extu.b  index, index
-        swap.b  index, dup
-        or      index, dup
-        mov.w   dup, @-Rptr
+        mov.w   index, @-Rptr
         sub     dtdx, t
         .endr
         cmp/gt  Lptr, Rptr
-        bt      .block_8px_gt
+        bt      .block_16px_gt
 .block_tail_gt:
-        add     #-6, Lptr
+        add     #-14, Lptr
         cmp/gt  Lptr, Rptr
         bf      .scanline_end_gt
 
@@ -361,13 +373,12 @@ _rasterizeGT_asm:
 
         mov     g, LMAP
         and     mask, LMAP      // LMAP = (g & 0xFFFFFF00)
-        mov.b   @(index, LMAP), index
+        shll    LMAP
+        shll    index
+        mov.w   @(index, LMAP), index
         sub     dgdx, g         // g -= dgdx
 
-        extu.b  index, index
-        swap.b  index, dup
-        or      index, dup      // dup = index | (index << 8)
-        mov.w   dup, @-Rptr
+        mov.w   index, @-Rptr
 
         cmp/gt  Lptr, Rptr
         bt/s    .block_2px_gt
@@ -412,6 +423,10 @@ _rasterizeGT_asm:
         mov.l   @(SP_R, sp), R
         bra     .loop_gt
         mov.l   @(SP_H, sp), Rh
+
+.align 2
+var_LMAP_PAIRS_gt:
+        .long _gLightmapPairsHalf
 
 #undef tmp
 #undef Lh

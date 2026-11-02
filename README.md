@@ -7,6 +7,7 @@ decoding; an experimental optional Sega CD CPU worker can share the work.
 **Sega CD is not required.**
 
 [Build and controls](src/platform/32x/README.md) ·
+[Latest rendering comparison](docs/32x/shading-performance.md) ·
 [CPU worker comparison and limitations](docs/32x/cpu-workers.md)
 
 This is an experimental alpha. Music, persistent saves/settings and physical

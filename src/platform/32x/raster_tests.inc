@@ -6,6 +6,9 @@ volatile uint32 gRasterTestGT = 2166136261u;
 volatile uint32 gRasterTestDone = 0;
 volatile uint32 gRasterTestMathErrors = 0;
 
+volatile uint32 gRasterTestShadeCases = 0;
+volatile uint32 gRasterTestShades = 2166136261u;
+
 void marsRasterSelfTest()
 {
     MARS_WAIT();
@@ -44,6 +47,27 @@ void marsRasterSelfTest()
         if (type) gRasterTestGT = hash;
         else      gRasterTestFT = hash;
         gRasterTestCases++;
+    }
+    // Boundary shades and both gradient directions exercise the new table's
+    // first/last rows, fractional interpolation, odd endpoints and loop tails.
+    for (int32 shade = 0; shade < 4; shade++)
+    for (int32 odd = 0; odd < 2; odd++)
+    for (int32 width = 1; width <= FRAME_WIDTH - odd; width++)
+    for (int32 slope = 0; slope < 2; slope++)
+    {
+        fast_memset(fb, 0, FRAME_WIDTH * 6 / 4);
+        v[0].v.x = odd; v[0].v.y = 0;
+        v[1].v.x = odd + width; v[1].v.y = 0;
+        v[2].v.x = odd + width - slope * (width / 4); v[2].v.y = 4;
+        v[3].v.x = odd + slope * (width / 4); v[3].v.y = 4;
+        v[0].v.g = v[3].v.g = (shade & 1) ? 32 : 1;
+        v[1].v.g = v[2].v.g = (shade & 2) ? 32 : 1;
+        rasterizeGT_asm((uint16*)((uint8*)&MARS_OVERWRITE_IMG + 0x200), v, v, tile);
+        const volatile uint8* pixels = (const volatile uint8*)fb;
+        uint32 hash = gRasterTestShades;
+        for (int32 i = 0; i < FRAME_WIDTH * 6; i++) hash = (hash ^ pixels[i]) * 16777619u;
+        gRasterTestShades = hash;
+        gRasterTestShadeCases++;
     }
     uint32 seed = 0x3210ABCDu;
     for (int32 i = 0; i < 4096; i++)
