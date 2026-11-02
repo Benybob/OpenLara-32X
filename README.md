@@ -1,4 +1,16 @@
-# OpenLara
+# OpenLara 32X
+
+Sega 32X enhancement fork of [XProger/OpenLara](https://github.com/XProger/OpenLara).
+Standalone PWM sound effects, faster textured rendering, three working packed
+levels, and RAM checkpoints. **Sega CD is not required.**
+
+[Build and controls](src/platform/32x/README.md) ·
+[Emulator comparison and limitations](docs/32x/audio-performance.md)
+
+This is an experimental alpha. Music, persistent saves/settings and physical
+console validation remain outstanding. Original engine information follows.
+
+## OpenLara
 Classic Tomb Raider open-source engine
 
 [WebGL build with demo level](http://xproger.info/projects/OpenLara/)

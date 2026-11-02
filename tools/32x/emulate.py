@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 import subprocess
 import time
+import wave
 
 class Variable(C.Structure):
     _fields_ = [('key', C.c_char_p), ('value', C.c_char_p)]
@@ -19,6 +20,13 @@ class Variable(C.Structure):
 class Game(C.Structure):
     _fields_ = [('path', C.c_char_p), ('data', C.c_void_p),
                 ('size', C.c_size_t), ('meta', C.c_char_p)]
+
+class Geometry(C.Structure):
+    _fields_ = [(n,C.c_uint) for n in ('base_width','base_height','max_width','max_height')] + [('aspect',C.c_float)]
+class Timing(C.Structure):
+    _fields_ = [('fps',C.c_double),('sample_rate',C.c_double)]
+class AVInfo(C.Structure):
+    _fields_ = [('geometry',Geometry),('timing',Timing)]
 
 def main():
     p = argparse.ArgumentParser()
@@ -34,6 +42,7 @@ def main():
     p.add_argument('--capture-every', type=int, default=300)
     p.add_argument('--capture-frames', default='', help='Additional comma-separated frame numbers')
     p.add_argument('--reset-at', type=int, help='Reset the emulated console at this video frame')
+    p.add_argument('--audio', action='store_true', help='Capture the core output as stereo PCM capture.wav')
     a = p.parse_args()
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     symbols = {}
@@ -52,6 +61,7 @@ def main():
     frame = 0
     extra_captures = {int(x) for x in a.capture_frames.split(',') if x}
     last_image = None
+    audio_chunks = []
     @C.CFUNCTYPE(C.c_bool, C.c_uint, C.c_void_p)
     def environment(cmd, data):
         nonlocal pixel_format
@@ -104,7 +114,9 @@ def main():
     @C.CFUNCTYPE(None, C.c_int16, C.c_int16)
     def audio(left, right): pass
     @C.CFUNCTYPE(C.c_size_t, C.c_void_p, C.c_size_t)
-    def audio_batch(data, frames): return frames
+    def audio_batch(data, frames):
+        if a.audio and frames: audio_chunks.append(C.string_at(data,frames*4))
+        return frames
     @C.CFUNCTYPE(None)
     def poll(): pass
     @C.CFUNCTYPE(C.c_int16, C.c_uint, C.c_uint, C.c_uint, C.c_uint)
@@ -121,6 +133,8 @@ def main():
     if not core.retro_load_game(C.byref(Game(str(rom).encode(),None,0,None))):
         raise RuntimeError('ROM failed to load')
     core.retro_set_controller_port_device(0,1)
+    av = AVInfo()
+    core.retro_get_system_av_info(C.byref(av))
     def read_address(addr, size=4):
         if addr is None or not 0x06000000 <= addr < 0x06040000: return None
         base=C.c_void_p.in_dll(core,'Pico32xMem').value
@@ -154,13 +168,30 @@ def main():
                         'raster_ft':read_symbol('_gRasterTestFT'),
                         'raster_gt':read_symbol('_gRasterTestGT'),
                         'raster_done':read_symbol('_gRasterTestDone'),
-                        'math_errors':read_symbol('_gRasterTestMathErrors')})
+                        'math_errors':read_symbol('_gRasterTestMathErrors'),
+                        'audio_blocks':read_symbol('_gMarsAudioBlocks'),
+                        'audio_starts':read_symbol('_gMarsAudioStarts'),
+                        'audio_clips':read_symbol('_gMarsAudioClips'),
+                        'audio_peak_voices':read_symbol('_gMarsAudioPeakVoices'),
+                        'audio_test_hash':read_symbol('_gMarsAudioTestHash'),
+                        'audio_test_samples':read_symbol('_gMarsAudioTestSamples'),
+                        'audio_test_done':read_symbol('_gMarsAudioTestDone')})
     result={'rom':rom.name, 'rom_sha256':hashlib.sha256(rom.read_bytes()).hexdigest(),
             'input_events':events,
             'region':a.region,'emulated_hz':50 if a.region=='Europe' else 60,
             'frames':a.frames,'core_sha256':hashlib.sha256(Path(a.core).read_bytes()).hexdigest(),
             'interpreter':a.interpreter,'overrides':{k:v.decode() for k,v in overrides.items()},
             'host_seconds':time.monotonic()-start,'page_flips':flips,'samples':records}
+    if a.audio:
+        pcm=b''.join(audio_chunks)
+        with wave.open(str(out/'capture.wav'),'wb') as wav:
+            wav.setnchannels(2); wav.setsampwidth(2); wav.setframerate(round(av.timing.sample_rate));wav.writeframes(pcm)
+        values=memoryview(pcm).cast('h')
+        mean=sum(values)/len(values) if values else 0
+        variance=sum(v*v for v in values)/len(values)-mean*mean if values else 0
+        result['audio']={'frames':len(pcm)//4,'sample_rate':av.timing.sample_rate,
+                         'mean':mean,'ac_rms':max(0,variance)**0.5,
+                         'peak':max(map(abs,values),default=0),'sha256':hashlib.sha256(pcm).hexdigest()}
     (out/'run.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps({'rom':rom.name,'host_seconds':result['host_seconds'],
                       'flips':len(flips), 'last_sample':records[-1]}))

@@ -655,11 +655,31 @@ pri_dma_irq:
         mov.b   @(0x07,r1),r0           /* read TOCR */
 
         ! handle DMA IRQ
-
+        mov.l   r3,@-r15
+        mov.l   r4,@-r15
+        mov.l   r5,@-r15
+        mov.l   r6,@-r15
+        mov.l   r7,@-r15
+        sts.l   mach,@-r15
+        sts.l   macl,@-r15
+        sts.l   pr,@-r15
+        mov.l   pdi_dma_handler,r0
+        jsr     @r0
+        nop
+        lds.l   @r15+,pr
+        lds.l   @r15+,macl
+        lds.l   @r15+,mach
+        mov.l   @r15+,r7
+        mov.l   @r15+,r6
+        mov.l   @r15+,r5
+        mov.l   @r15+,r4
+        mov.l   @r15+,r3
         rts
         nop
 
         .align  2
+pdi_dma_handler:
+        .long   _pri_dma1_handler
 pdi_sh2_frtctl:
         .long   0xfffffe10
 
@@ -1195,7 +1215,13 @@ _SetSH2SR:
         .text
 
 pri_reset:
-        ! do any primary SH2 specific reset code here
+        ! VRES preserves SH2 peripherals. Stop audio before overwriting its
+        ! SDRAM buffers/state or enabling interrupts again in pri_start.
+        mov.l   reset_dma1,r1
+        mov     #0,r0
+        mov.l   r0,@r1
+        mov.l   reset_pwm,r1
+        mov.w   r0,@r1
 
         mov.l   sec_st,r0
         mov.l   sec_ok,r1
@@ -1255,6 +1281,10 @@ sec_reset:
         .align  2
 pri_st:
         .long   0x20004020
+reset_dma1:
+        .long   0xFFFFFF9C
+reset_pwm:
+        .long   0x20004030
 pri_ok:
         .ascii  "M_OK"
 pri_go:

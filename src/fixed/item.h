@@ -29,7 +29,7 @@ int32 alignOffset(int32 a, int32 b)
 
 void* soundPlay(int16 id, const vec3i* pos)
 {
-#if defined(__32X__) || defined(__WIN32__) // TODO
+#if defined(__WIN32__) // TODO
     return NULL;
 #endif
 
@@ -38,6 +38,10 @@ void* soundPlay(int16 id, const vec3i* pos)
 
     if (id < 0)
         return NULL;
+
+#ifdef __32X__
+    if (id >= 256 || !level.soundMap || !level.soundsInfo) return NULL;
+#endif
 
     // TODO gym
     // 0 -> 200
@@ -92,8 +96,12 @@ void* soundPlay(int16 id, const vec3i* pos)
 
 void soundStop(int16 id)
 {
-#if defined(__32X__) || defined(__WIN32__) // TODO
+#if defined(__WIN32__) // TODO
     return;
+#endif
+
+#ifdef __32X__
+    if (id < 0 || id >= 256 || !level.soundMap || !level.soundsInfo) return;
 #endif
 
     int16 a = level.soundMap[id];

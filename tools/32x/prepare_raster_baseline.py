@@ -25,6 +25,9 @@ def main():
     for name in ('Makefile', 'src-md/Makefile', '32x.h', 'raster_tests.inc', '.gitignore'):
         shutil.copy2(source / name, platform / name)
     shutil.copytree(source / 'ldscripts', platform / 'ldscripts', dirs_exist_ok=True)
+    tools = dst / 'tools/32x'
+    tools.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(Path(__file__).with_name('pack_sfx.py'), tools / 'pack_sfx.py')
     main_cpp = platform / 'main.cpp'
     text = main_cpp.read_text()
     anchor = '    gameInit();'

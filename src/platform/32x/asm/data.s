@@ -29,3 +29,7 @@ LEVEL2:
         .incbin "data/LEVEL2.PKD"
 
         .align  4
+        .global _MARS_SFX_DATA
+_MARS_SFX_DATA:
+        .incbin "data/sfx-ima.bin"
+        .align 4

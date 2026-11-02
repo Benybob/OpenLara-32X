@@ -165,6 +165,7 @@ extern "C"
     void fast_memset(void *dst, int value, int len);
     void CacheControl(int mode);
     void CacheClearLine(void* ptr);
+    int SetSH2SR(int level);
 }
 
 #define CacheClear()\

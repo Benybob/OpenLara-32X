@@ -54,6 +54,13 @@
 #define SP_R    24
 #define SP_SIZE 28
 
+#ifndef MARS_TEXTURE_PAIRS
+    #define MARS_TEXTURE_PAIRS 8
+#endif
+#if MARS_TEXTURE_PAIRS != 4 && MARS_TEXTURE_PAIRS != 8
+    #error MARS_TEXTURE_PAIRS must be 4 or 8
+#endif
+
 .align 4
 .exit_ft:
         // pop
@@ -83,7 +90,8 @@ _rasterizeFT_asm:
         mov.l   var_LMAP_ADDR_ft, LMAP
         mov.b   @(VERTEX_G, L), tmp
         shll8   tmp
-        or      tmp, LMAP
+        shll    tmp
+        add     tmp, LMAP
 
         mov.l   var_divTable_ft, divLUT
 
@@ -243,7 +251,8 @@ _rasterizeFT_asm:
 
         getUV   Lt, index
         mov.b   @(index, TILE), index
-        mov.b   @(index, LMAP), index
+        shll    index
+        mov.w   @(index, LMAP), index
         mov.b   index, @Lptr
         add     #1, Lptr
 
@@ -257,7 +266,8 @@ _rasterizeFT_asm:
 
         getUV   t, index
         mov.b   @(index, TILE), index
-        mov.b   @(index, LMAP), index
+        shll    index
+        mov.w   @(index, LMAP), index
         sub     dtdx, t
         mov.b   index, @-Rptr
 
@@ -268,26 +278,23 @@ _rasterizeFT_asm:
 .block_prepare_ft:
         shll    dtdx            // [delay slot] optional
 
-        // Four word stores per loop retain the original 2-pixel sampling,
-        // while removing three loop branches on spans of eight or more pixels.
-        add     #6, Lptr
+        // Batch word stores while retaining the original two-pixel sampling.
+        add     #((MARS_TEXTURE_PAIRS - 1) * 2), Lptr
         cmp/gt  Lptr, Rptr
         bf      .block_tail_ft
 .block_8px_ft:
-        .rept 4
+        .rept MARS_TEXTURE_PAIRS
         getUV   t, index
         mov.b   @(index, TILE), index
-        mov.b   @(index, LMAP), index
-        extu.b  index, index
-        swap.b  index, dup
-        or      index, dup
-        mov.w   dup, @-Rptr
+        shll    index
+        mov.w   @(index, LMAP), index
+        mov.w   index, @-Rptr
         sub     dtdx, t
         .endr
         cmp/gt  Lptr, Rptr
         bt      .block_8px_ft
 .block_tail_ft:
-        add     #-6, Lptr
+        add     #-((MARS_TEXTURE_PAIRS - 1) * 2), Lptr
         cmp/gt  Lptr, Rptr
         bf      .scanline_end_ft
 
@@ -295,12 +302,10 @@ _rasterizeFT_asm:
         getUV   t, index
 
         mov.b   @(index, TILE), index
-        mov.b   @(index, LMAP), index
+        shll    index
+        mov.w   @(index, LMAP), index
 
-        extu.b  index, index
-        swap.b  index, dup
-        or      index, dup      // dup = index | (index << 8)
-        mov.w   dup, @-Rptr
+        mov.w   index, @-Rptr
 
         cmp/gt  Lptr, Rptr
         bt/s    .block_2px_ft
@@ -337,7 +342,7 @@ var_frameWidth_ft:
 
 .align 2
 var_LMAP_ADDR_ft:
-        .long   _gLightmap_base
+        .long   _gLightmapPairs - 256
 var_divTable_ft:
         .long   _divTable
 

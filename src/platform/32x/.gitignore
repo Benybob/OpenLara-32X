@@ -3,6 +3,9 @@
 /OpenLara.elf
 /OpenLara.32x
 /temp.bin
+/sound_assets.h
+/data/sfx-ima.bin
+/data/sfx-manifest.json
 /src-md/*.o
 /src-md/*.d
 /src-md/*.elf

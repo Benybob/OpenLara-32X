@@ -1,6 +1,7 @@
 # OpenLara for Sega 32X
 
-Build with a Sega cross toolchain containing SH-2 and 68000 GCC, binutils,
+Requires GNU make 4.3 or newer, Python 3, and a Sega cross toolchain containing
+SH-2 and 68000 GCC, binutils,
 Newlib and the size-optimized SH division library. This version was tested
 with the Linux x86-64 archive from
 [marsdev v1.0.0-rc1](https://github.com/andwn/marsdev/releases/tag/v1.0.0-rc1),
@@ -42,18 +43,33 @@ engine's existing 8 KiB serialization buffer with a separate saved metadata
 header. They survive repeated restores within the same level, and are discarded
 when changing level, resetting, or powering off. They are **not battery-backed
 SRAM saves**. The passport's save/load support uses the same session checkpoint.
-Settings persistence and audio remain unimplemented in this platform backend.
+Settings persistence remains unimplemented. Sound effects work on the standalone
+32X through PWM; Sega CD is not required.
 
 Performance changes preserve the existing 320×224 output, two-pixel horizontal
 texture sampling, draw distance, and dual-CPU polygon scheduling. The textured
-scanline loops now process four pixel pairs per iteration, with the original
-pair loop handling short spans and tails. Clipping uses the SH-2's signed
+flat-textured scanline loop processes eight pixel pairs per iteration, with
+four pairs in the Gouraud-textured loop. Short spans and tails retain the pair
+loop. A 16 KiB table stores duplicated shade bytes to remove per-pair expansion.
+`CPPFLAGS=-DMARS_TEXTURE_PAIRS=4` selects the smaller flat-textured unroll. Clipping uses the SH-2's signed
 hardware divider, and sprites reuse their projection reciprocal. Sprite and
 glyph submissions now consume two vertices instead of accidentally consuming
 four. `CPPFLAGS=-DMARS_SOFTWARE_CLIP_DIV` selects the software clipping division
 path for experiments; clean before changing build flags.
 
-See [the measured comparison](../../../docs/32x/report.md) for results and limits.
+The audio backend mixes up to four 11,025 Hz mono effects, including pitch,
+volume and effect replay/uniqueness, into both PWM outputs using double-buffered
+SH-2 DMA. The build repacks the existing GBA effects into a deduplicated IMA
+ADPCM ROM bank automatically; it downloads no game assets. Muting SFX stops
+active effects. Music playback is not implemented: the repository has no music
+bank. The Sega CD path remains a future optional enhancement.
+
+The clock uses VBlank-derived milliseconds so the periodic watchdog interrupt
+does not compete with audio DMA on the tested PicoDrive core. Console reset
+stops DMA and PWM before reinitializing memory.
+
+See [the audio/performance comparison](../../../docs/32x/audio-performance.md)
+and the [earlier renderer-only report](../../../docs/32x/report.md).
 
 The headless runner uses a PicoDrive libretro core and Python 3 with Pillow:
 
@@ -63,7 +79,7 @@ python3 tools/32x/emulate.py \
   --rom src/platform/32x/OpenLara.32x \
   --elf src/platform/32x/OpenLara.elf \
   --nm /absolute/path/to/mars/sh-elf/bin/sh-elf-nm \
-  --script /absolute/path/to/start.json --frames 2400 --out /tmp/openlara-run
+  --script /absolute/path/to/start.json --frames 2400 --audio --out /tmp/openlara-run
 ```
 
 Run this command from the repository root. Replay JSON contains
@@ -77,7 +93,9 @@ The runner reads PicoDrive's exported `Pico32xMem` and `Pico32x` symbols and
 expects little-endian Linux. It is pinned and tested against core commit
 `1890c2932234c9d30f4cd3851d02228baae8f09e`; a future core layout may require
 updating these reads. Its JSON records page flips, guest FPS, level, player
-position, ROM/core hashes and settings. Host execution time is diagnostic only.
+position, ROM/core hashes, audio counters and settings. `--audio` also writes
+`capture.wav`; `--reset-at 1800` exercises reset. Host execution time is diagnostic
+only.
 
 ```sh
 python3 tools/32x/compare_runs.py /tmp/original/run.json /tmp/improved/run.json
@@ -88,7 +106,9 @@ To run the on-target raster regression test, clean and rebuild with
 normal gameplay after initialization, executes 2,556 textured/Gouraud span cases
 and 4,096 signed division comparisons, and leaves result symbols in SDRAM.
 Expected FT hash: `1300929039`; GT hash: `1388686019`; done: `1`; math errors:
-`0`. Clean and rebuild without that flag to return to the playable ROM.
+`0`. The same build also decodes all 592,276 effect samples: expected audio
+hash `1623845143`, audio done `1`. The hash matches an independent IMA decoder.
+Clean and rebuild without that flag to return to the playable ROM.
 
 For a direct regression comparison with the original rasterizer, create a fresh
 worktree at upstream commit `3b268ca4bf986c380f44a26ffd9218bf6d376249` and run

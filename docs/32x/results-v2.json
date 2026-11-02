@@ -1,0 +1,137 @@
+{
+  "date": "2026-11-02",
+  "upstream_repository": "https://github.com/XProger/OpenLara",
+  "upstream_commit": "3b268ca4bf986c380f44a26ffd9218bf6d376249",
+  "picodrive_commit": "1890c2932234c9d30f4cd3851d02228baae8f09e",
+  "toolchain": "andwn/marsdev v1.0.0-rc1 linux-x86_64 (GCC 13.1.0)",
+  "toolchain_asset": "https://github.com/andwn/marsdev/releases/download/v1.0.0-rc1/marsdev-v1.0.0-rc1-linux-x86_64.tar.xz",
+  "toolchain_sha256": "f3efa32bd378d9d0b1e68afcd34d3649930bd378a5014addce0bdef92452e395",
+  "core_sha256": "cf02f0dfbeeab43d65dad090cb1c187ddac817b6e0bc29aa432607ef622d0215",
+  "rom_sha256": "83b8f4890ad8906de8f3a9a11308e7e48a5e9ebe7a09c5e75d5966edfd911ce8",
+  "rom_bytes": 4194304,
+  "static_initialized_bytes": 17020,
+  "bss_bytes": 224412,
+  "static_total_bytes": 241432,
+  "remaining_sdram_bytes": 20712,
+  "warmup_video_frames": 480,
+  "measurement_video_frames": 1920,
+  "benchmarks": [
+    {
+      "scene": "Opening view",
+      "original_fps": 20.0,
+      "renderer_only_fps": 24.0,
+      "audio_build_fps": 26.84375,
+      "change_percent": 34.21875000000001,
+      "original_final_position": [
+        75264,
+        3072,
+        3584
+      ],
+      "final_position": [
+        75264,
+        3072,
+        3584
+      ],
+      "effect_starts": 1,
+      "peak_voices": 1,
+      "clipped_samples": 0
+    },
+    {
+      "scene": "Turning replay",
+      "original_fps": 22.4375,
+      "renderer_only_fps": 26.125,
+      "audio_build_fps": 26.5,
+      "change_percent": 18.105849582172695,
+      "original_final_position": [
+        75264,
+        3072,
+        3584
+      ],
+      "final_position": [
+        75264,
+        3072,
+        3584
+      ],
+      "effect_starts": 21,
+      "peak_voices": 2,
+      "clipped_samples": 0
+    },
+    {
+      "scene": "Movement replay",
+      "original_fps": 18.84375,
+      "renderer_only_fps": 19.65625,
+      "audio_build_fps": 18.59375,
+      "change_percent": -1.3266998341625258,
+      "original_final_position": [
+        73907,
+        3072,
+        25049
+      ],
+      "final_position": [
+        73907,
+        3072,
+        25049
+      ],
+      "effect_starts": 67,
+      "peak_voices": 3,
+      "clipped_samples": 0
+    }
+  ],
+  "sound_bank": {
+    "sample_rate": 11025,
+    "codec": "IMA/DVI ADPCM, low nibble first",
+    "unique_effects": 91,
+    "encoded_bytes": 296276,
+    "decoded_samples": 592276,
+    "source_sha256": {
+      "GYM": "c9b32008bc976f4049962d0df61e75b818dc487b18da7d4fb1de5129ff45d715",
+      "LEVEL1": "511bbc9dc65f71a7aa85307faf6f8e100ff42e04b4f561fc9a036afe5ae14d77",
+      "LEVEL2": "8d63f2a161a229b802befcf6f026c534a08dcea617ba38afa64727007b7b552d"
+    },
+    "bank_sha256": "a24eb0ef1961b610649bb306c323be034d56a20fa62a937b57cdae4d94a6ad75"
+  },
+  "raster": {
+    "cases": 2556,
+    "ft_hash": 1300929039,
+    "gt_hash": 1388686019,
+    "division_cases": 4096,
+    "division_errors": 0,
+    "drc_and_interpreter_match": true
+  },
+  "audio_decoder": {
+    "independent_reference": "CPython audioop.adpcm2lin with swapped nibble order and predictor/index zero per effect",
+    "hash": 1623845143,
+    "samples": 592276,
+    "drc_and_interpreter_match": true
+  },
+  "opening_image_diff_bbox": [
+    13,
+    3,
+    25,
+    16
+  ],
+  "features": {
+    "sega_cd_required": false,
+    "music": false,
+    "standalone_effects": true,
+    "levels": [
+      "GYM",
+      "LEVEL1",
+      "LEVEL2"
+    ],
+    "checkpoint_payload_bytes": 1488,
+    "repeat_restore": true,
+    "soft_reset": true,
+    "no_checkpoint_restore": true,
+    "pal_audio_gameplay": true,
+    "60_second_audio_stream": true
+  },
+  "limitations": [
+    "Emulator measurements only; no physical 32X test",
+    "Input sampling follows render boundaries. The renderer-only movement run ends at a slightly different position; the original and audio runs have the same final position.",
+    "No music playback or Sega CD backend",
+    "No persistent settings/saves or remaining campaign levels",
+    "No full game completion test"
+  ],
+  "opening_interpreter_fps": 26.90625
+}

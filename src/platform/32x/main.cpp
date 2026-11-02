@@ -61,7 +61,12 @@ void osSetPalette(const uint16* palette)
 
 int32 osGetSystemTimeMS()
 {
-    return int32((mars_pwdt_ovf_count << 8) | SH2_WDT_RTCNT);
+    // A real millisecond count, at video-frame resolution. Keeping the
+    // watchdog disabled also avoids competing internal IRQs on PicoDrive's
+    // SH-2 core, which currently has one pending internal-interrupt slot.
+    uint32 frames = uint32(gFrameIndex);
+    uint32 rate = (MARS_VDP_DISPMODE & MARS_NTSC_FORMAT) ? 60 : 50;
+    return int32((frames / rate) * 1000 + ((frames % rate) * 1000) / rate);
 }
 
 bool osSaveSettings()
@@ -259,19 +264,21 @@ int main()
         pageClear();
     }
 
-    SH2_WDT_VCR = (65<<8) | (SH2_WDT_VCR & 0x00FF); // set exception vector for WDT
-    SH2_INT_IPRA = (SH2_INT_IPRA & 0xFF0F) | 0x0020; // set WDT INT to priority 2
-
-    SH2_WDT_WTCSR_TCNT = 0x5A00;
-    SH2_WDT_WTCSR_TCNT = 0xA53E;
+    SH2_WDT_WTCSR_TCNT = 0xA500; // No periodic watchdog IRQ; time comes from VBlank.
 
     MARS_SYS_COMM4 = 0;
 
     gameInit();
 
+#ifndef MARS_RASTER_SELFTEST
+    sndInit();
+#endif
+
 #ifdef MARS_RASTER_SELFTEST
     extern void marsRasterSelfTest();
     marsRasterSelfTest();
+    extern void marsAudioSelfTest();
+    marsAudioSelfTest();
     while (1);
 #endif
 

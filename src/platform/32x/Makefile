@@ -5,6 +5,12 @@ export ROOTDIR
 TARGET = OpenLara
 BUILD = build
 SOURCES = . asm ../../fixed
+PYTHON ?= python3
+SFX_OUTPUTS = sound_assets.h data/sfx-ima.bin data/sfx-manifest.json
+SFX_SOURCES = $(wildcard ../gba/data/*.PKD) ../../../tools/32x/pack_sfx.py
+
+$(SFX_OUTPUTS) &: $(SFX_SOURCES)
+	$(PYTHON) ../../../tools/32x/pack_sfx.py
 
 LDSCRIPTSDIR ?= $(CURDIR)/ldscripts
 
@@ -25,7 +31,8 @@ MDLD = $(MDPREFIX)ld
 LIBPATH = -L$(ROOTDIR)/sh-elf/lib -L$(ROOTDIR)/sh-elf/lib/gcc/sh-elf/$(CC_VER) -L$(ROOTDIR)/sh-elf/sh-elf/lib
 INCPATH = -I. -I../../fixed -I$(ROOTDIR)/sh-elf/include -I$(ROOTDIR)/sh-elf/sh-elf/include
 
-SHCCFLAGS = $(CPPFLAGS) -MMD -MP -D__32X__ -m2 -mb -O2 -Wall -Wno-class-memaccess -g -c -fno-rtti -fno-exceptions -fomit-frame-pointer -fshort-enums -frandom-seed=0
+OPT ?= -O2
+SHCCFLAGS = $(CPPFLAGS) -MMD -MP -D__32X__ -m2 -mb $(OPT) -Wall -Wno-class-memaccess -g -c -fno-rtti -fno-exceptions -fomit-frame-pointer -fshort-enums -frandom-seed=0
 SHLDFLAGS = -T $(LDSCRIPTSDIR)/mars.ld -Wl,-Map=$(BUILD)/output.map -nostdlib
 SHASFLAGS = --big
 
@@ -50,7 +57,8 @@ all: $(TARGET).32x
 
 $(OBJS): | $(BUILD)
 $(BUILD)/crt0.o: src-md/m68k.bin
-$(BUILD)/data.o: $(wildcard data/*.PKD)
+$(BUILD)/data.o: $(wildcard data/*.PKD) data/sfx-ima.bin
+$(BUILD)/sound.o: sound_assets.h
 
 -include $(OBJS:.o=.d)
 

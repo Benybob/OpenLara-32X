@@ -50,6 +50,8 @@ enum FaceType {
 
 extern Level level;
 
+extern "C" { ALIGN16 uint16 gLightmapPairs[256 * 32]; }
+
 ViewportRel viewportRel;
 Vertex* gVerticesBase;
 Face* gFacesBase;
@@ -782,6 +784,10 @@ void renderFree()
 
 void renderLevelInit()
 {
+    // Duplicate each palette index once per level rather than per pixel pair.
+    for (int32 i = 0; i < 256 * 32; i++) {
+        gLightmapPairs[i] = uint16(gLightmap[i]) * 0x101;
+    }
 }
 
 void renderLevelFree()

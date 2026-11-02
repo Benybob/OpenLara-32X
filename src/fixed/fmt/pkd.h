@@ -80,6 +80,11 @@ bool read_PKD(DataStream &f)
     }
 #endif
 
+    #ifdef __32X__
+        extern void marsSetLevelSounds();
+        marsSetLevelSounds();
+    #endif
+
     return true;
 }
 
