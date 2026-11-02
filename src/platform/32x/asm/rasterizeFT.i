@@ -80,12 +80,12 @@ _rasterizeFT_asm:
         mov.l   r14, @-sp
         add     #-SP_SIZE, sp
 
-        mov.l   var_LMAP_ADDR, LMAP
+        mov.l   var_LMAP_ADDR_ft, LMAP
         mov.b   @(VERTEX_G, L), tmp
         shll8   tmp
         or      tmp, LMAP
 
-        mov.l   var_divTable, divLUT
+        mov.l   var_divTable_ft, divLUT
 
         mov     gtile, TILE
         nop
@@ -267,7 +267,29 @@ _rasterizeFT_asm:
 
 .block_prepare_ft:
         shll    dtdx            // [delay slot] optional
-        nop
+
+        // Four word stores per loop retain the original 2-pixel sampling,
+        // while removing three loop branches on spans of eight or more pixels.
+        add     #6, Lptr
+        cmp/gt  Lptr, Rptr
+        bf      .block_tail_ft
+.block_8px_ft:
+        .rept 4
+        getUV   t, index
+        mov.b   @(index, TILE), index
+        mov.b   @(index, LMAP), index
+        extu.b  index, index
+        swap.b  index, dup
+        or      index, dup
+        mov.w   dup, @-Rptr
+        sub     dtdx, t
+        .endr
+        cmp/gt  Lptr, Rptr
+        bt      .block_8px_ft
+.block_tail_ft:
+        add     #-6, Lptr
+        cmp/gt  Lptr, Rptr
+        bf      .scanline_end_ft
 
 .block_2px_ft:
         getUV   t, index
@@ -299,8 +321,11 @@ _rasterizeFT_asm:
         dt      h
 
         mov.w   var_frameWidth_ft, tmp
-        bf/s    .scanline_start_ft
+        bt/s    .scanline_block_done_ft
         add     tmp, pixel      // [delay slot] pixel += 120 + 120 + 80
+        bra     .scanline_start_ft
+        nop
+.scanline_block_done_ft:
 
         mov.l   @(SP_L, sp), L
         mov.l   @(SP_R, sp), R
@@ -309,6 +334,12 @@ _rasterizeFT_asm:
 
 var_frameWidth_ft:
         .word   FRAME_WIDTH
+
+.align 2
+var_LMAP_ADDR_ft:
+        .long   _gLightmap_base
+var_divTable_ft:
+        .long   _divTable
 
 #undef tmp
 #undef Lh

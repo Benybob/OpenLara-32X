@@ -810,13 +810,13 @@ extern "C" X_NOINLINE void drawPoly(uint32 flags, VertexLink* v, const ColorInde
     #define LERP_SHIFT          6
     #define LERP(a,b,t)         (b + ((a - b) * t >> LERP_SHIFT))
     //#define LERP2(a,b,ta,tb)    LERP(a,b,t)
-    #define LERP2(a,b,ta,tb)    (b + (((a - b) * ta / tb) >> LERP_SHIFT) ) // less gaps between clipped polys, but slow
+    #define LERP2(a,b,ta,tb)    (b + (marsDivide((a - b) * ta, tb) >> LERP_SHIFT))
 
     #define CLIP_AXIS(X, Y, edge, output) {\
         int32 ta = (edge - b->v.X) << LERP_SHIFT;\
         int32 tb = (a->v.X - b->v.X);\
         ASSERT(tb != 0);\
-        int32 t = ta / tb;\
+        int32 t = marsDivide(ta, tb);\
         ASSERT(count < 8);\
         VertexLink* p = output + count++;\
         p->v.X = edge;\
@@ -1137,8 +1137,12 @@ void renderSprite(int32 vx, int32 vy, int32 vz, int32 vg, int32 index)
     int32 t = y + sprite->t;
     int32 b = y + sprite->b;
 
-    // TODO one projection
-    PERSPECTIVE(l, t, z);
+    // Both corners share a depth: fetch the reciprocal only once.
+    int32 dz = PERSPECTIVE_DZ(z);
+    if (dz >= DIV_TABLE_SIZE) dz = DIV_TABLE_SIZE - 1;
+    int32 d = FixedInvU(dz);
+    l = (l * d) >> (16 - PROJ_SHIFT);
+    t = (t * d) >> (16 - PROJ_SHIFT);
 
     l += (FRAME_WIDTH >> 1);
     if (l >= viewport.x1) return;
@@ -1146,7 +1150,8 @@ void renderSprite(int32 vx, int32 vy, int32 vz, int32 vg, int32 index)
     t += (FRAME_HEIGHT >> 1);
     if (t >= viewport.y1) return;
 
-    PERSPECTIVE(r, b, z);
+    r = (r * d) >> (16 - PROJ_SHIFT);
+    b = (b * d) >> (16 - PROJ_SHIFT);
 
     r += (FRAME_WIDTH >> 1);
     if (r < viewport.x0) return;
@@ -1184,7 +1189,6 @@ void renderSprite(int32 vx, int32 vy, int32 vz, int32 vg, int32 index)
     f->flags = (FACE_TYPE_SPRITE << FACE_TYPE_SHIFT) | index;
     f->indices[0] = v1 - gVertices;
 
-    gVerticesBase += 2;
 }
 
 void renderGlyph(int32 vx, int32 vy, int32 index)
@@ -1229,7 +1233,6 @@ void renderGlyph(int32 vx, int32 vy, int32 index)
     f->flags = (FACE_TYPE_SPRITE << FACE_TYPE_SHIFT) | index;
     f->indices[0] = v1 - gVertices;
 
-    gVerticesBase += 2;
 }
 
 #define BAR_HEIGHT  5
@@ -1285,3 +1288,7 @@ void* copyBackground()
 //    return gBackgroundCopy;
     return NULL;
 }
+
+#ifdef MARS_RASTER_SELFTEST
+    #include "raster_tests.inc"
+#endif

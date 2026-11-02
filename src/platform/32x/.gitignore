@@ -1,0 +1,10 @@
+/build/
+/dump/
+/OpenLara.elf
+/OpenLara.32x
+/temp.bin
+/src-md/*.o
+/src-md/*.d
+/src-md/*.elf
+/src-md/*.bin
+/src-md/output.map

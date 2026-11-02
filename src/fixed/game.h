@@ -37,6 +37,16 @@ bool gameSave()
     ItemObj* item = items;
     for (int32 i = 0; i < level.itemsCount; i++, item++)
     {
+    #ifdef __32X__
+        // Reserve enough space for the largest current virtual save record
+        // before calling it. A failed save must not leave a loadable partial
+        // checkpoint or write beyond the fixed session buffer.
+        const uint32 maxRecord = sizeof(ItemSave) + sizeof(Lara::LaraSave) + sizeof(Enemy::EnemySave);
+        if (sizeof(gSaveData) - uint32(ptr - gSaveData) < maxRecord) {
+            gSaveGame.dataSize = 0;
+            return osSaveGame();
+        }
+    #endif
         ptr = item->save(ptr);
     }
     gSaveGame.dataSize = ptr - gSaveData;
@@ -352,6 +362,11 @@ void gameRender()
         {
             drawFPS();
         }
+
+    #ifdef __32X__
+        extern void marsDrawStatus();
+        marsDrawStatus();
+    #endif
 
         flush();
     }

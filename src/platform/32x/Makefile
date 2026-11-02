@@ -1,14 +1,12 @@
-ifdef $(GENDEV)
-ROOTDIR = $(GENDEV)
-else
-ROOTDIR = /opt/toolchains/sega
-endif
+ROOTDIR ?= $(if $(GENDEV),$(GENDEV),/opt/toolchains/sega)
+export ROOTDIR
+.DEFAULT_GOAL := all
 
 TARGET = OpenLara
 BUILD = build
 SOURCES = . asm ../../fixed
 
-LDSCRIPTSDIR = $(ROOTDIR)/ldscripts
+LDSCRIPTSDIR ?= $(CURDIR)/ldscripts
 
 SHPREFIX = $(ROOTDIR)/sh-elf/bin/sh-elf-
 SHCC = $(SHPREFIX)gcc
@@ -18,7 +16,7 @@ SHAS = $(SHPREFIX)as
 SHLD = $(SHPREFIX)ld
 SHOBJC = $(SHPREFIX)objcopy
 
-CC_VER := $(shell $(SHCC) -dumpversion)
+CC_VER := $(shell $(SHCC) -dumpfullversion -dumpversion)
 
 MDPREFIX = $(ROOTDIR)/m68k-elf/bin/m68k-elf-
 MDAS = $(MDPREFIX)as
@@ -27,7 +25,7 @@ MDLD = $(MDPREFIX)ld
 LIBPATH = -L$(ROOTDIR)/sh-elf/lib -L$(ROOTDIR)/sh-elf/lib/gcc/sh-elf/$(CC_VER) -L$(ROOTDIR)/sh-elf/sh-elf/lib
 INCPATH = -I. -I../../fixed -I$(ROOTDIR)/sh-elf/include -I$(ROOTDIR)/sh-elf/sh-elf/include
 
-SHCCFLAGS = -D__32X__ -m2 -mb -O2 -Wall -Wno-class-memaccess -g -c -fno-rtti -fno-exceptions -fomit-frame-pointer -fshort-enums -frandom-seed=0
+SHCCFLAGS = $(CPPFLAGS) -MMD -MP -D__32X__ -m2 -mb -O2 -Wall -Wno-class-memaccess -g -c -fno-rtti -fno-exceptions -fomit-frame-pointer -fshort-enums -frandom-seed=0
 SHLDFLAGS = -T $(LDSCRIPTSDIR)/mars.ld -Wl,-Map=$(BUILD)/output.map -nostdlib
 SHASFLAGS = --big
 
@@ -46,9 +44,15 @@ OBJS =  $(addprefix $(BUILD)/, $(notdir $(FILES_AS:%.s=%.o)))
 OBJS += $(addprefix $(BUILD)/, $(notdir $(FILES_CC:%.c=%.o)))
 OBJS += $(addprefix $(BUILD)/, $(notdir $(FILES_XX:%.cpp=%.o)))
 
-.PHONY: dump clean
+.PHONY: all dump clean
 
-all: $(BUILD) m68k.bin $(TARGET).32x
+all: $(TARGET).32x
+
+$(OBJS): | $(BUILD)
+$(BUILD)/crt0.o: src-md/m68k.bin
+$(BUILD)/data.o: $(wildcard data/*.PKD)
+
+-include $(OBJS:.o=.d)
 
 dump:
 	@[ -d dump ] || mkdir -p dump
@@ -65,17 +69,17 @@ $(TARGET).32x: $(TARGET).elf
 	$(DD) if=temp.bin of=$@ bs=1024K conv=sync
 	$(RM) -f temp.bin
 
-$(TARGET).elf: $(OBJS)
+$(TARGET).elf: $(OBJS) $(LDSCRIPTSDIR)/mars.ld
 	$(SHCC) $(SHLDFLAGS) $(OBJS) $(LIBS) -o $(TARGET).elf
 
-m68k.bin:
-	make -C src-md
+src-md/m68k.bin: $(wildcard src-md/*.c src-md/*.s) src-md/Makefile $(LDSCRIPTSDIR)/mars-md.ld
+	$(MAKE) -C src-md
 
 $(BUILD)/%.o: %.s
 	$(SHAS) $(SHASFLAGS) $(INCPATH) -o $@ $<
 
 $(BUILD)/%.o: asm/%.s
-	$(SHPP) $(INCPATH) -o $(BUILD)/$(notdir $<) $<
+	$(SHPP) $(CPPFLAGS) $(INCPATH) -MMD -MP -MF $(@:.o=.d) -MT $@ -o $(BUILD)/$(notdir $<) $<
 	$(SHAS) $(SHASFLAGS) $(INCPATH) -o $@ $(BUILD)/$(notdir $<)
 
 $(BUILD)/%.o: %.c

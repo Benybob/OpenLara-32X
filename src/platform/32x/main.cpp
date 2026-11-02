@@ -2,6 +2,8 @@ const void* TRACKS_IMA;
 const void* TITLE_SCR;
 
 extern void* LEVEL1_PKD;
+extern void* GYM_PKD;
+extern void* LEVEL2_PKD;
 
 #include "game.h"
 
@@ -23,6 +25,33 @@ int32 gFrameIndex = 0;
 
 int32 g_timer;
 int32 fps;
+
+static const char* statusText = NULL;
+static int32 statusUntil = 0;
+static int32 videoRate = 60;
+static SaveGame checkpointHeader;
+static bool checkpointValid = false;
+static bool restoringCheckpoint = false;
+
+static bool validSaveHeader(const SaveGame &header)
+{
+    return header.version == SAVEGAME_VER &&
+           header.dataSize > 0 && header.dataSize <= sizeof(gSaveData) &&
+           header.level >= LVL_TR1_GYM && header.level <= LVL_TR1_2;
+}
+
+static void setStatus(const char* text)
+{
+    statusText = text;
+    statusUntil = gFrameIndex + videoRate * 2;
+}
+
+void marsDrawStatus()
+{
+    if (statusText && gFrameIndex < statusUntil) {
+        drawText(0, FRAME_HEIGHT - 12, statusText, TEXT_ALIGN_CENTER);
+    }
+}
 
 void osSetPalette(const uint16* palette)
 {
@@ -47,17 +76,31 @@ bool osLoadSettings()
 
 bool osCheckSave()
 {
-    return false;
+    // Session checkpoint in the engine's existing 8 KB buffer. This is not
+    // cartridge SRAM: reset/power-off and changing levels discard it.
+    return checkpointValid && validSaveHeader(checkpointHeader);
 }
 
 bool osSaveGame()
 {
-    return false;
+    bool ok = validSaveHeader(gSaveGame);
+    checkpointValid = ok;
+    if (ok) checkpointHeader = gSaveGame;
+    setStatus(ok ? "RAM checkpoint saved" : "Checkpoint unavailable");
+    return ok;
 }
 
 bool osLoadGame()
 {
-    return false;
+    bool ok = osCheckSave();
+    if (ok) {
+        // gSaveGame is also the live statistics record. Keep a separate header
+        // so kills, time, secrets and track flags restore to the saved values.
+        gSaveGame = checkpointHeader;
+        restoringCheckpoint = true;
+    }
+    setStatus(ok ? "Checkpoint restored" : "No checkpoint");
+    return ok;
 }
 
 void osJoyVibrate(int32 index, int32 L, int32 R)
@@ -91,7 +134,36 @@ const void* osLoadScreen(LevelID id)
 
 const void* osLoadLevel(LevelID id)
 {
-    return (void*)LEVEL1_PKD; // TODO
+    if (!restoringCheckpoint) checkpointValid = false;
+    restoringCheckpoint = false;
+    switch (id)
+    {
+        case LVL_TR1_GYM: return GYM_PKD;
+        case LVL_TR1_2:   return LEVEL2_PKD;
+        // The title inventory uses the first level's models and font.
+        default:         return LEVEL1_PKD;
+    }
+}
+
+static void updateShortcuts()
+{
+    static uint32 previous = 0;
+    uint32 shortcuts = 0;
+    if (keys & IK_START) {
+        if (keys & IK_Z) shortcuts |= 1; // Start + Z: session checkpoint
+        if (keys & IK_X) shortcuts |= 2; // Start + X: restore checkpoint
+    }
+    if (shortcuts && inventory.state == INV_STATE_NONE && players[0])
+    {
+        if ((shortcuts & 1) && !(previous & 1)) {
+            if (!gameSave()) setStatus("Checkpoint unavailable");
+        } else if ((shortcuts & 2) && !(previous & 2)) {
+            if (osCheckSave()) gameLoad();
+            else setStatus("No checkpoint");
+        }
+        keys = 0; // Do not also walk/look while holding a shortcut.
+    }
+    previous = shortcuts;
 }
 
 uint16 pageIndex = 0;
@@ -197,10 +269,17 @@ int main()
 
     gameInit();
 
+#ifdef MARS_RASTER_SELFTEST
+    extern void marsRasterSelfTest();
+    marsRasterSelfTest();
+    while (1);
+#endif
+
     int32 lastFrame = (gFrameIndex >> 1) - 1;
     int32 fpsCounter = 0;
     int32 fpsFrame = gFrameIndex;
     int32 vsyncRate = (MARS_VDP_DISPMODE & MARS_NTSC_FORMAT) ? 60 : 50;
+    videoRate = vsyncRate;
 
     while (1)
     {
@@ -228,6 +307,7 @@ int main()
         lastFrame = frame;
 
         updateInput();
+        updateShortcuts();
 
         gameUpdate(delta);
 

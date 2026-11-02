@@ -1,0 +1,130 @@
+{
+  "date": "2026-11-02",
+  "upstream_repository": "https://github.com/XProger/OpenLara",
+  "upstream_commit": "3b268ca4bf986c380f44a26ffd9218bf6d376249",
+  "picodrive_commit": "1890c2932234c9d30f4cd3851d02228baae8f09e",
+  "toolchain": "andwn/marsdev v1.0.0-rc1 linux-x86_64 (GCC 13.1.0)",
+  "toolchain_asset": "https://github.com/andwn/marsdev/releases/download/v1.0.0-rc1/marsdev-v1.0.0-rc1-linux-x86_64.tar.xz",
+  "toolchain_sha256": "f3efa32bd378d9d0b1e68afcd34d3649930bd378a5014addce0bdef92452e395",
+  "core_sha256": "cf02f0dfbeeab43d65dad090cb1c187ddac817b6e0bc29aa432607ef622d0215",
+  "roms": {
+    "baseline": {
+      "sha256": "b89f15467386a780867444eb02030ad97637cadecebe229585ac03d18a70a190",
+      "bytes": 2097152
+    },
+    "improved": {
+      "sha256": "60d08e0be1c6eb23f46ae5be634e7979f5b4513e45e502799a7ea51cd1545557",
+      "bytes": 4194304
+    }
+  },
+  "warmup_video_frames": 480,
+  "measurement_video_frames": 1920,
+  "benchmarks": [
+    {
+      "scene": "Opening view",
+      "baseline_fps": 20.0,
+      "improved_fps": 24.0,
+      "change_percent": 19.999999999999996
+    },
+    {
+      "scene": "Turning replay",
+      "baseline_fps": 22.4375,
+      "improved_fps": 26.125,
+      "change_percent": 16.434540389972142
+    },
+    {
+      "scene": "Movement replay",
+      "baseline_fps": 18.84375,
+      "improved_fps": 19.65625,
+      "change_percent": 4.311774461028195
+    },
+    {
+      "scene": "Opening view (PAL)",
+      "baseline_fps": 25.0,
+      "improved_fps": 25.0,
+      "change_percent": 0.0
+    }
+  ],
+  "raster_tests": {
+    "raster-baseline": {
+      "frame": 1499,
+      "page": 0,
+      "fps": 0,
+      "vblank": 1492,
+      "level": 0,
+      "vertices": 100827296,
+      "faces": 100796576,
+      "player_pos": null,
+      "save_size": 0,
+      "raster_cases": 2556,
+      "raster_ft": 1300929039,
+      "raster_gt": 1388686019,
+      "raster_done": 1,
+      "math_errors": 0
+    },
+    "raster-final-drc": {
+      "frame": 1499,
+      "page": 0,
+      "fps": 0,
+      "vblank": 1492,
+      "level": 0,
+      "vertices": 100827536,
+      "faces": 100796816,
+      "player_pos": null,
+      "player_yaw": null,
+      "save_size": 0,
+      "raster_cases": 2556,
+      "raster_ft": 1300929039,
+      "raster_gt": 1388686019,
+      "raster_done": 1,
+      "math_errors": 0
+    },
+    "raster-final-interpreter": {
+      "frame": 1499,
+      "page": 0,
+      "fps": 0,
+      "vblank": 1491,
+      "level": 0,
+      "vertices": 100827536,
+      "faces": 100796816,
+      "player_pos": null,
+      "player_yaw": null,
+      "save_size": 0,
+      "raster_cases": 2556,
+      "raster_ft": 1300929039,
+      "raster_gt": 1388686019,
+      "raster_done": 1,
+      "math_errors": 0
+    }
+  },
+  "checkpoint_bytes": 1488,
+  "checkpoint_saved_position": [
+    75264,
+    3072,
+    3584
+  ],
+  "checkpoint_first_walk_position": [
+    75264,
+    3072,
+    6680
+  ],
+  "checkpoint_second_walk_position": [
+    75264,
+    3072,
+    5664
+  ],
+  "checkpoint_restored_position": [
+    75264,
+    3072,
+    3584
+  ],
+  "checkpoint_cleared_by_reset": true,
+  "opening_image_difference_bounds": [
+    13,
+    3,
+    25,
+    16
+  ],
+  "static_sdram_bytes": 223704,
+  "rom_padding_bytes": 4194304
+}

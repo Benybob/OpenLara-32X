@@ -105,6 +105,22 @@
 #define SH2_INT_VCRWDT      (*(volatile unsigned short *)0xFFFFFEE4)
 #define SH2_INT_VCRDIV      (*(volatile unsigned long *)0xFFFFFF0C)
 
+// Each SH-2 has its own signed divider. Reading DVDNT waits for completion
+// on hardware; unlike a reciprocal approximation, this truncates toward zero
+// exactly as C integer division does. Interrupt handlers must not use DIVU
+// between these accesses. The port's current handlers do not use it.
+static inline int marsDivide(int numerator, int denominator)
+{
+#ifdef MARS_SOFTWARE_CLIP_DIV
+    return numerator / denominator;
+#else
+    volatile int* const div = (volatile int*)0xFFFFFF00;
+    div[0] = denominator; // DVSR
+    div[1] = numerator;   // DVDNT: start 32 / 32 division
+    return div[1];
+#endif
+}
+
 #define SEGA_CTRL_UP        0x0001
 #define SEGA_CTRL_DOWN      0x0002
 #define SEGA_CTRL_LEFT      0x0004

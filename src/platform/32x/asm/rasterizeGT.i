@@ -251,10 +251,13 @@ _rasterizeGT_asm:
         shlr16  Lptr            // Lptr = (Lx >> 16)
         shlr16  Rptr            // Rptr = (Rx >> 16)
         cmp/gt  Lptr, Rptr      // if (!(Rptr > Lptr)) skip zero length scanline
-        bf/s    .scanline_end_fast_gt
+        bt/s    .scanline_nonempty_gt
 
         // iw = divTable[Rptr - Lptr]
         mov     Rptr, tmp       // [delay slot]
+        bra     .scanline_end_fast_gt
+        nop
+.scanline_nonempty_gt:
         sub     Lptr, tmp
         mov.l   var_divTable, divLUT
         shll    tmp
@@ -326,6 +329,31 @@ _rasterizeGT_asm:
         shll    dtdx            // [delay slot] optional
         shll    dgdx
 
+        // Preserve the original texture and shade sample for each pixel pair.
+        add     #6, Lptr
+        cmp/gt  Lptr, Rptr
+        bf      .block_tail_gt
+.block_8px_gt:
+        .rept 4
+        getUV   t, index
+        mov.b   @(index, TILE), index
+        mov     g, LMAP
+        and     mask, LMAP
+        mov.b   @(index, LMAP), index
+        sub     dgdx, g
+        extu.b  index, index
+        swap.b  index, dup
+        or      index, dup
+        mov.w   dup, @-Rptr
+        sub     dtdx, t
+        .endr
+        cmp/gt  Lptr, Rptr
+        bt      .block_8px_gt
+.block_tail_gt:
+        add     #-6, Lptr
+        cmp/gt  Lptr, Rptr
+        bf      .scanline_end_gt
+
 .block_2px_gt:
         getUV   t, index
 
@@ -374,8 +402,11 @@ _rasterizeGT_asm:
         dt      h
 
         mov.w   var_frameWidth, tmp
-        bf/s    .scanline_start_gt
+        bt/s    .scanline_block_done_gt
         add     tmp, pixel      // [delay slot] pixel += 120 + 120 + 80
+        bra     .scanline_start_gt
+        nop
+.scanline_block_done_gt:
 
         mov.l   @(SP_L, sp), L
         mov.l   @(SP_R, sp), R
