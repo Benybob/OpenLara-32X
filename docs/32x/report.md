@@ -1,5 +1,7 @@
 # OpenLara 32X: measured improvements
 
+> Historical first renderer build. See [the current CPU worker report](cpu-workers.md).
+
 Tested November 2, 2026 against upstream commit
 `3b268ca4bf986c380f44a26ffd9218bf6d376249` of
 [XProger/OpenLara](https://github.com/XProger/OpenLara). These are emulator

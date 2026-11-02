@@ -213,6 +213,13 @@ main_loop:
 
 | process request from Master SH2
 handle_req:
+        cmpi.w  #0x0600,d0
+        blo.b   legacy_req
+        cmpi.w  #0x06FF,d0
+        bhi.b   legacy_req
+        jsr     md_worker_request
+        bra     main_loop
+legacy_req:
         cmpi.w  #0x01FF,d0
         bls     read_sram
         cmpi.w  #0x02FF,d0
@@ -368,6 +375,7 @@ read_mouse:
 
 
 vert_blank:
+        addq.l  #1,mdWorkerTicks
         move.l  d1,-(sp)
         move.l  d2,-(sp)
 

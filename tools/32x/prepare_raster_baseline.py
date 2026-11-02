@@ -22,8 +22,10 @@ def main():
     if subprocess.check_output(['git', '-C', str(dst), 'status', '--porcelain'], text=True).strip():
         raise SystemExit('Baseline worktree must be clean')
     platform = dst / 'src/platform/32x'
-    for name in ('Makefile', 'src-md/Makefile', '32x.h', 'raster_tests.inc', '.gitignore'):
+    for name in ('Makefile', 'src-md/Makefile', '32x.h', 'worker.h', 'raster_tests.inc', '.gitignore'):
         shutil.copy2(source / name, platform / name)
+    md_make = platform / 'src-md/Makefile'
+    md_make.write_text(md_make.read_text().replace(' worker.o worker_blob.o worker_fast.o', ''))
     shutil.copytree(source / 'ldscripts', platform / 'ldscripts', dirs_exist_ok=True)
     tools = dst / 'tools/32x'
     tools.mkdir(parents=True, exist_ok=True)

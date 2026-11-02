@@ -37,6 +37,7 @@ Use a six-button controller:
 | Mode | Inventory |
 | Start + Z | Save a RAM checkpoint during gameplay |
 | Start + X | Restore the checkpoint during gameplay |
+| Start + Y | Cycle Genesis worker → Genesis + CD auto → SH2 only |
 
 Checkpoint feedback appears at the bottom of the screen. Checkpoints use the
 engine's existing 8 KiB serialization buffer with a separate saved metadata
@@ -57,19 +58,38 @@ glyph submissions now consume two vertices instead of accidentally consuming
 four. `CPPFLAGS=-DMARS_SOFTWARE_CLIP_DIV` selects the software clipping division
 path for experiments; clean before changing build flags.
 
-The audio backend mixes up to four 11,025 Hz mono effects, including pitch,
-volume and effect replay/uniqueness, into both PWM outputs using double-buffered
-SH-2 DMA. The build repacks the existing GBA effects into a deduplicated IMA
-ADPCM ROM bank automatically; it downloads no game assets. Muting SFX stops
-active effects. Music playback is not implemented: the repository has no music
-bank. The Sega CD path remains a future optional enhancement.
+The audio backend mixes up to four 11,025 Hz mono effects into both PWM outputs.
+The Genesis 68000 now decodes/resamples up to two predicted voice blocks while
+the SH2s run gameplay/rendering. Its decoder instructions and lookup tables run
+from Genesis work RAM. Finished blocks arrive through the 32X FIFO and master
+SH2 DMA0; the SH2 mixes current volume and streams PWM through DMA1. Late or
+stale predictions use the native SH2 decoder. A worker fault disables offloading
+and leaves the SH2 audio path running. Controllers remain serviced by VBlank.
+
+Genesis offloading is the default. Start + Y during gameplay cycles to optional
+**Genesis + CD auto**, then **SH2 only**, then back to Genesis. In CD auto mode,
+the Genesis can dispatch one voice to the Sega CD CPU while decoding another
+itself. An absent/unsupported/unresponsive CD falls back to Genesis. The private
+CD bootstrap calls no drive/BIOS functions and needs no disc; it uses only
+program RAM, Word RAM and communication registers, never backup RAM. Sega CD
+is not required. CD mode is experimental and opt-in: the decoder batch test is
+faster, but the measured movement replay has no FPS gain. Reset restores the
+default Genesis mode. Physical-console validation remains outstanding.
+
+The voice-major mixer and hot audio IRQ routines use SH2 SDRAM. Samples,
+pitch/volume behavior and 6 dB headroom retain the previous integer results.
+The build repacks existing GBA effects into a deduplicated IMA ADPCM bank and
+emits both CPUs' decoder tables automatically; it downloads no game assets.
+Muting SFX stops active effects. Music playback remains unimplemented.
 
 The clock uses VBlank-derived milliseconds so the periodic watchdog interrupt
 does not compete with audio DMA on the tested PicoDrive core. Console reset
-stops DMA and PWM before reinitializing memory.
+stops both DMA channels and PWM before reinitializing memory. A fresh CD boot
+acknowledgement prevents reusing stale readiness state after reset.
 
-See [the audio/performance comparison](../../../docs/32x/audio-performance.md)
-and the [earlier renderer-only report](../../../docs/32x/report.md).
+See [the CPU worker report](../../../docs/32x/cpu-workers.md), the
+[audio/performance comparison](../../../docs/32x/audio-performance.md), and the
+[earlier renderer-only report](../../../docs/32x/report.md).
 
 The headless runner uses a PicoDrive libretro core and Python 3 with Pillow:
 
@@ -108,6 +128,8 @@ and 4,096 signed division comparisons, and leaves result symbols in SDRAM.
 Expected FT hash: `1300929039`; GT hash: `1388686019`; done: `1`; math errors:
 `0`. The same build also decodes all 592,276 effect samples: expected audio
 hash `1623845143`, audio done `1`. The hash matches an independent IMA decoder.
+The new mixer also matches the previous sample-major mixer in 320 cases with
+zero errors and hash `4267401245`.
 Clean and rebuild without that flag to return to the playable ROM.
 
 For a direct regression comparison with the original rasterizer, create a fresh
@@ -116,3 +138,30 @@ worktree at upstream commit `3b268ca4bf986c380f44a26ffd9218bf6d376249` and run
 This copies build support and inserts the same guarded test entry points, while
 keeping the original rasterizer. Build that worktree with the same self-test
 flag and toolchain, then compare the recorded hashes.
+
+The asynchronous workers have their own on-target test. Clean and rebuild with:
+
+```sh
+make -C src/platform/32x -j4 ROOTDIR=/absolute/path/to/mars \
+  CPPFLAGS='-DMARS_WORKER_SELFTEST -DMARS_WORKER_VERIFY -DMARS_WORKER_MODE=2'
+```
+
+Run that ROM for 3,000 frames with the headless runner, once normally and once
+with `--cd-fixture`. Both should record `TestCases=273`, `Used=546`,
+`TestErrors=0`, `VerifyErrors=0`, `TestDone=1`. The CD run should also record
+`CDJobs=273`; without CD it should be zero. Repeat with `--interpreter` for the
+SH2 interpreter. This covers all 91 effects, partial/end positions and increments
+32–1024, checking each output sample and final decoder state against the SH2
+reference. Timings are synthetic decoder throughput, not gameplay FPS.
+
+`--cd-fixture` creates original signature-only firmware and a dummy media image
+inside the output directory to attach PicoDrive's CD hardware through its normal
+cartridge/media loader. It uses no commercial BIOS or game disc and does not
+modify the emulator. It exercises the private bootstrap, sub-CPU, ownership
+handshakes and actual decoder, but cannot establish retail hardware compatibility.
+
+Fault injection is test-only: `MARS_CD_STALL_TEST` stalls the fourth CD job;
+`MARS_MD_STALL_TEST` stalls the fourth Genesis job. The former should fall back
+to Genesis; the latter should disable the worker and keep gameplay/SH2 audio
+running. Neither define belongs in a playable release. Always clean before
+changing build flags and rebuild without test flags for normal play.

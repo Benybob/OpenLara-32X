@@ -1220,6 +1220,8 @@ pri_reset:
         mov.l   reset_dma1,r1
         mov     #0,r0
         mov.l   r0,@r1
+        add     #-16,r1
+        mov.l   r0,@r1                 /* stop worker DMA0 as well */
         mov.l   reset_pwm,r1
         mov.w   r0,@r1
 

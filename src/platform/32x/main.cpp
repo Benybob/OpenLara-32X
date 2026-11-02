@@ -157,6 +157,7 @@ static void updateShortcuts()
     if (keys & IK_START) {
         if (keys & IK_Z) shortcuts |= 1; // Start + Z: session checkpoint
         if (keys & IK_X) shortcuts |= 2; // Start + X: restore checkpoint
+        if (keys & IK_Y) shortcuts |= 4; // Start + Y: cycle audio worker
     }
     if (shortcuts && inventory.state == INV_STATE_NONE && players[0])
     {
@@ -165,6 +166,12 @@ static void updateShortcuts()
         } else if ((shortcuts & 2) && !(previous & 2)) {
             if (osCheckSave()) gameLoad();
             else setStatus("No checkpoint");
+        } else if ((shortcuts & 4) && !(previous & 4)) {
+            extern void marsCycleAudioWorker();
+            extern volatile uint32 gMarsWorkerMode;
+            marsCycleAudioWorker();
+            setStatus(gMarsWorkerMode == 0 ? "Audio: SH2" :
+                (gMarsWorkerMode == 1 ? "Audio: Genesis worker" : "Audio: Genesis + CD auto"));
         }
         keys = 0; // Do not also walk/look while holding a shortcut.
     }
@@ -270,7 +277,7 @@ int main()
 
     gameInit();
 
-#ifndef MARS_RASTER_SELFTEST
+#if !defined(MARS_RASTER_SELFTEST) && !defined(MARS_WORKER_SELFTEST)
     sndInit();
 #endif
 
@@ -279,6 +286,14 @@ int main()
     marsRasterSelfTest();
     extern void marsAudioSelfTest();
     marsAudioSelfTest();
+    extern void marsMixerSelfTest();
+    marsMixerSelfTest();
+    while (1);
+#endif
+
+#ifdef MARS_WORKER_SELFTEST
+    extern void marsWorkerSelfTest();
+    marsWorkerSelfTest();
     while (1);
 #endif
 

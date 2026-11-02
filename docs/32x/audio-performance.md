@@ -1,5 +1,7 @@
 # Standalone 32X audio and further rendering improvements
 
+> Historical audio build before CPU workers. See [the current CPU worker report](cpu-workers.md).
+
 This fork adds sound effects without requiring Sega CD. It retains XProger's
 fixed-point engine and dual-SH-2 renderer. Tested November 2, 2026 with PicoDrive
 commit `1890c2932234c9d30f4cd3851d02228baae8f09e` and marsdev GCC 13.1.0.

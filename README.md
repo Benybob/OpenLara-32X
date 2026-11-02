@@ -2,10 +2,12 @@
 
 Sega 32X enhancement fork of [XProger/OpenLara](https://github.com/XProger/OpenLara).
 Standalone PWM sound effects, faster textured rendering, three working packed
-levels, and RAM checkpoints. **Sega CD is not required.**
+levels, and RAM checkpoints. The Genesis CPU now handles background audio
+decoding; an experimental optional Sega CD CPU worker can share the work.
+**Sega CD is not required.**
 
 [Build and controls](src/platform/32x/README.md) ·
-[Emulator comparison and limitations](docs/32x/audio-performance.md)
+[CPU worker comparison and limitations](docs/32x/cpu-workers.md)
 
 This is an experimental alpha. Music, persistent saves/settings and physical
 console validation remain outstanding. Original engine information follows.

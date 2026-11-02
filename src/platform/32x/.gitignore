@@ -6,6 +6,8 @@
 /sound_assets.h
 /data/sfx-ima.bin
 /data/sfx-manifest.json
+/src-md/worker_tables.h
+/src-md/worker_fast_tables.inc
 /src-md/*.o
 /src-md/*.d
 /src-md/*.elf

@@ -33,6 +33,8 @@ MEMORY {
 }
 
 PROVIDE (__stack = 0x0603FC00);
+/* SH2 assembly and the audio IRQ execute from writable SDRAM. */
+PHDRS { rom PT_LOAD FLAGS(5); ram PT_LOAD FLAGS(7); }
 
 SECTIONS {
 	.text 0x02000000 : AT(0x00000000) {
@@ -69,7 +71,7 @@ SECTIONS {
 		_etext = .;
 		*(.lit)
 		. = ALIGN(0x4);
-	} > rom
+	} > rom :rom
 	_stext = SIZEOF (.text);
  __text_end = 0x02000000 + SIZEOF(.text);
 
@@ -77,9 +79,10 @@ SECTIONS {
 		*(.got.plt) *(.got)
 		*(.shdata)
 		*(.data .data.*)
+		*(.ramtext .ramtext.*)
 		_edata = .;
 		. = ALIGN(0x4);
-	} > ram
+	} > ram :ram
 	_sdata = SIZEOF (.data);
  __data_size = SIZEOF(.data);
 
@@ -93,7 +96,7 @@ SECTIONS {
  _end = ALIGN(8);
 		__end = _end;
 		end = _end;
-	} > ram
+	} > ram :ram
 
 	.eh_frame 0 (NOLOAD) :
 	{

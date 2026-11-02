@@ -42,6 +42,7 @@ def main():
     p.add_argument('--capture-every', type=int, default=300)
     p.add_argument('--capture-frames', default='', help='Additional comma-separated frame numbers')
     p.add_argument('--reset-at', type=int, help='Reset the emulated console at this video frame')
+    p.add_argument('--cd-fixture', action='store_true', help='Attach synthetic CD hardware fixture; no commercial BIOS or disc')
     p.add_argument('--audio', action='store_true', help='Capture the core output as stereo PCM capture.wav')
     a = p.parse_args()
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
@@ -56,15 +57,22 @@ def main():
     overrides = {'picodrive_input1': b'6 button pad', 'picodrive_region': a.region.encode(),
                  'picodrive_drc': b'disabled' if a.interpreter else b'enabled',
                  'picodrive_frameskip': b'disabled', 'picodrive_overclk68k': b'disabled'}
-    directory = str(out.resolve()).encode()
+    system_dir = out.resolve()/'synthetic-cd-fixture' if a.cd_fixture else out.resolve()
+    system_dir.mkdir(parents=True,exist_ok=True)
+    directory = str(system_dir).encode()
     pixel_format = 0
     frame = 0
     extra_captures = {int(x) for x in a.capture_frames.split(',') if x}
     last_image = None
     audio_chunks = []
+    @C.CFUNCTYPE(None, C.c_int, C.c_char_p)
+    def log_message(level, fmt): pass
     @C.CFUNCTYPE(C.c_bool, C.c_uint, C.c_void_p)
     def environment(cmd, data):
         nonlocal pixel_format
+        if cmd == 27:
+            C.cast(data,C.POINTER(C.c_void_p))[0] = C.cast(log_message,C.c_void_p).value
+            return True
         if cmd in (9, 30, 31):
             C.cast(data, C.POINTER(C.c_char_p))[0] = directory
             return True
@@ -130,7 +138,22 @@ def main():
     core.retro_init()
     core.retro_load_game.argtypes=[C.POINTER(Game)]; core.retro_load_game.restype=C.c_bool
     rom=Path(a.rom).resolve()
-    if not core.retro_load_game(C.byref(Game(str(rom).encode(),None,0,None))):
+    content = rom
+    if a.cd_fixture:
+        import shutil
+        content = system_dir/'worker-fixture.iso'
+        fixture = bytearray(2048*32); fixture[:14] = b'SEGADISCSYSTEM'
+        content.write_bytes(fixture)
+        shutil.copy2(rom,content.with_suffix('.32x'))
+        bios = bytearray(0x20000); bios[0x100:0x104] = b'SEGA'
+        # Original signature-only fixture, not a commercial BIOS. The worker
+        # starts from its own reset vectors and calls no BIOS functions.
+        for name in ('bios_CD_U.bin','bios_CD_E.bin'):
+            target = system_dir/name
+            if target.exists() and target.read_bytes() != bios:
+                raise RuntimeError('Refusing to overwrite existing BIOS file: '+str(target))
+            target.write_bytes(bios)
+    if not core.retro_load_game(C.byref(Game(str(content).encode(),None,0,None))):
         raise RuntimeError('ROM failed to load')
     core.retro_set_controller_port_device(0,1)
     av = AVInfo()
@@ -169,6 +192,9 @@ def main():
                         'raster_gt':read_symbol('_gRasterTestGT'),
                         'raster_done':read_symbol('_gRasterTestDone'),
                         'math_errors':read_symbol('_gRasterTestMathErrors'),
+                        'worker_mode':read_symbol('_gMarsWorkerMode'),
+                        **{n:read_symbol('_gMarsWorker'+n) for n in ('Jobs','Used','Stale','Late','Faults','Backend','VerifyErrors','CDJobs','TestCases','TestErrors','TestDone','TestFrames')},
+                        **{'Mixer'+n:read_symbol('_gMarsMixer'+n) for n in ('TestCases','TestErrors','TestHash')},
                         'audio_blocks':read_symbol('_gMarsAudioBlocks'),
                         'audio_starts':read_symbol('_gMarsAudioStarts'),
                         'audio_clips':read_symbol('_gMarsAudioClips'),
@@ -178,7 +204,7 @@ def main():
                         'audio_test_done':read_symbol('_gMarsAudioTestDone')})
     result={'rom':rom.name, 'rom_sha256':hashlib.sha256(rom.read_bytes()).hexdigest(),
             'input_events':events,
-            'region':a.region,'emulated_hz':50 if a.region=='Europe' else 60,
+            'cd_fixture':a.cd_fixture, 'region':a.region,'emulated_hz':50 if a.region=='Europe' else 60,
             'frames':a.frames,'core_sha256':hashlib.sha256(Path(a.core).read_bytes()).hexdigest(),
             'interpreter':a.interpreter,'overrides':{k:v.decode() for k,v in overrides.items()},
             'host_seconds':time.monotonic()-start,'page_flips':flips,'samples':records}

@@ -1,0 +1,303 @@
+{
+  "date": "2026-11-02",
+  "upstream_repository": "https://github.com/XProger/OpenLara",
+  "upstream_commit": "3b268ca4bf986c380f44a26ffd9218bf6d376249",
+  "picodrive_commit": "1890c2932234c9d30f4cd3851d02228baae8f09e",
+  "toolchain": "andwn/marsdev v1.0.0-rc1 linux-x86_64 (GCC 13.1.0)",
+  "toolchain_asset": "https://github.com/andwn/marsdev/releases/download/v1.0.0-rc1/marsdev-v1.0.0-rc1-linux-x86_64.tar.xz",
+  "toolchain_sha256": "f3efa32bd378d9d0b1e68afcd34d3649930bd378a5014addce0bdef92452e395",
+  "core_sha256": "cf02f0dfbeeab43d65dad090cb1c187ddac817b6e0bc29aa432607ef622d0215",
+  "previous_published_commit": "fc7a91e0208f584f50d854e0b58a7b397e1ff000",
+  "rom_sha256": "e6fc07661b36d0272d7331d2e18c04466839406c262168379546e3c2990b93c6",
+  "rom_bytes": 4194304,
+  "sh2_initialized_bytes": 18752,
+  "sh2_bss_bytes": 226600,
+  "sh2_static_bytes": 245352,
+  "sh2_remaining_sdram_bytes": 16792,
+  "genesis_initialized_bytes": 17154,
+  "genesis_bss_bytes": 1142,
+  "genesis_static_bytes": 18296,
+  "warmup_video_frames": 480,
+  "measurement_video_frames": 1920,
+  "benchmarks": [
+    {
+      "scene": "Opening view",
+      "original_fps": 20.0,
+      "previous_audio_fps": 26.84375,
+      "genesis_worker_fps": 26.84375,
+      "change_vs_previous_percent": 0.0,
+      "worker_jobs": 28,
+      "consumed_voice_blocks": 28,
+      "late_deadline_checks": 0,
+      "stale_voice_blocks": 0,
+      "faults": 0,
+      "final_position": [
+        75264,
+        3072,
+        3584
+      ]
+    },
+    {
+      "scene": "Turning replay",
+      "original_fps": 22.4375,
+      "previous_audio_fps": 26.5,
+      "genesis_worker_fps": 26.71875,
+      "change_vs_previous_percent": 0.8254716981132004,
+      "worker_jobs": 287,
+      "consumed_voice_blocks": 284,
+      "late_deadline_checks": 0,
+      "stale_voice_blocks": 3,
+      "faults": 0,
+      "final_position": [
+        75264,
+        3072,
+        3584
+      ]
+    },
+    {
+      "scene": "Movement replay",
+      "original_fps": 18.84375,
+      "previous_audio_fps": 18.59375,
+      "genesis_worker_fps": 18.96875,
+      "change_vs_previous_percent": 2.0168067226890685,
+      "worker_jobs": 877,
+      "consumed_voice_blocks": 873,
+      "late_deadline_checks": 50,
+      "stale_voice_blocks": 102,
+      "faults": 0,
+      "final_position": [
+        73907,
+        3072,
+        25049
+      ]
+    }
+  ],
+  "worker_selftest": {
+    "gen": {
+      "TestCases": 273,
+      "TestErrors": 0,
+      "TestDone": 1,
+      "TestFrames": 680,
+      "Used": 546,
+      "VerifyErrors": 0,
+      "CDJobs": 0,
+      "Faults": 0
+    },
+    "cd": {
+      "TestCases": 273,
+      "TestErrors": 0,
+      "TestDone": 1,
+      "TestFrames": 603,
+      "Used": 546,
+      "VerifyErrors": 0,
+      "CDJobs": 273,
+      "Faults": 0
+    },
+    "interp-gen": {
+      "TestCases": 273,
+      "TestErrors": 0,
+      "TestDone": 1,
+      "TestFrames": 680,
+      "Used": 546,
+      "VerifyErrors": 0,
+      "CDJobs": 0,
+      "Faults": 0
+    },
+    "interp-cd": {
+      "TestCases": 273,
+      "TestErrors": 0,
+      "TestDone": 1,
+      "TestFrames": 603,
+      "Used": 546,
+      "VerifyErrors": 0,
+      "CDJobs": 273,
+      "Faults": 0
+    }
+  },
+  "raster_and_mixer": {
+    "drc": {
+      "raster_cases": 2556,
+      "raster_ft": 1300929039,
+      "raster_gt": 1388686019,
+      "raster_done": 1,
+      "math_errors": 0,
+      "audio_test_hash": 1623845143,
+      "audio_test_samples": 592276,
+      "audio_test_done": 1,
+      "MixerTestCases": 320,
+      "MixerTestErrors": 0,
+      "MixerTestHash": 4267401245
+    },
+    "interp": {
+      "raster_cases": 2556,
+      "raster_ft": 1300929039,
+      "raster_gt": 1388686019,
+      "raster_done": 1,
+      "math_errors": 0,
+      "audio_test_hash": 1623845143,
+      "audio_test_samples": 592276,
+      "audio_test_done": 1,
+      "MixerTestCases": 320,
+      "MixerTestErrors": 0,
+      "MixerTestHash": 4267401245
+    }
+  },
+  "cd_gameplay": {
+    "attached_genesis_only_fps": 18.53125,
+    "attached_genesis_and_cd_fps": 18.4375,
+    "cd_jobs": 891,
+    "consumed_voice_blocks": 1032,
+    "interpretation": "No demonstrated gameplay FPS improvement. Same synthetic CD attachment and base replay; CD mode selected at frame 500."
+  },
+  "fault_injection": {
+    "cdfault": {
+      "worker_mode": 2,
+      "Faults": 0,
+      "CDJobs": 3,
+      "TestCases": 273,
+      "TestErrors": 0,
+      "TestDone": 1,
+      "Backend": 1,
+      "audio_blocks": 0,
+      "level": 0,
+      "vblank": 2839
+    },
+    "mdfault": {
+      "worker_mode": 0,
+      "Faults": 1,
+      "CDJobs": 0,
+      "TestCases": null,
+      "TestErrors": null,
+      "TestDone": null,
+      "Backend": 1,
+      "audio_blocks": 1609,
+      "level": 2,
+      "vblank": 2392
+    }
+  },
+  "limitations": [
+    "Emulator tests only; no physical Genesis/32X/CD validation",
+    "CD attachment uses original signature-only firmware and dummy media, not retail BIOS/drive behavior",
+    "Inputs are sampled at render boundaries; equal final positions do not establish identical intermediate work.",
+    "CD mode remains experimental and opt-in; no movement FPS gain demonstrated",
+    "No music, persistent saves/settings, additional campaign levels or full-game completion"
+  ],
+  "smoke_tests": {
+    "reset": {
+      "worker_mode": 1,
+      "Faults": 0,
+      "CDJobs": 0,
+      "Backend": 0,
+      "audio_blocks": 210,
+      "level": 0,
+      "vblank": 297,
+      "save_size": 0,
+      "player_pos": null
+    },
+    "cd-reset": {
+      "worker_mode": 2,
+      "Faults": 0,
+      "CDJobs": 208,
+      "Backend": 3,
+      "audio_blocks": 857,
+      "level": 2,
+      "vblank": 1197,
+      "save_size": 0,
+      "player_pos": [
+        75264,
+        3332,
+        11280
+      ]
+    },
+    "absent": {
+      "worker_mode": 2,
+      "Faults": 0,
+      "CDJobs": 0,
+      "Backend": 1,
+      "audio_blocks": 1715,
+      "level": 2,
+      "vblank": 2392,
+      "save_size": 0,
+      "player_pos": [
+        73907,
+        3072,
+        25049
+      ]
+    },
+    "pal": {
+      "worker_mode": 1,
+      "Faults": 0,
+      "CDJobs": 0,
+      "Backend": 1,
+      "audio_blocks": 2070,
+      "level": 2,
+      "vblank": 2393,
+      "save_size": 0,
+      "player_pos": [
+        74895,
+        3072,
+        3345
+      ]
+    },
+    "gym": {
+      "worker_mode": 1,
+      "Faults": 0,
+      "CDJobs": 0,
+      "Backend": 1,
+      "audio_blocks": 1285,
+      "level": 1,
+      "vblank": 1792,
+      "save_size": 0,
+      "player_pos": [
+        37376,
+        -1280,
+        51712
+      ]
+    },
+    "level2": {
+      "worker_mode": 1,
+      "Faults": 0,
+      "CDJobs": 0,
+      "Backend": 1,
+      "audio_blocks": 1285,
+      "level": 3,
+      "vblank": 1792,
+      "save_size": 0,
+      "player_pos": [
+        78336,
+        -1024,
+        12800
+      ]
+    },
+    "idle": {
+      "worker_mode": 1,
+      "Faults": 0,
+      "CDJobs": 0,
+      "Backend": 1,
+      "audio_blocks": 2578,
+      "level": 2,
+      "vblank": 3592,
+      "save_size": 0,
+      "player_pos": [
+        75264,
+        3072,
+        3584
+      ]
+    },
+    "interpreter": {
+      "worker_mode": 1,
+      "Faults": 0,
+      "CDJobs": 0,
+      "Backend": 1,
+      "audio_blocks": 1712,
+      "level": 2,
+      "vblank": 2391,
+      "save_size": 0,
+      "player_pos": [
+        73728,
+        3072,
+        25082
+      ]
+    }
+  }
+}

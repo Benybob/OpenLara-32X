@@ -81,6 +81,23 @@ def main():
     lines += [f'    {{soundMap{i},soundInfos{i},sampleIds{i},{len(level[2])}}},' for i,level in enumerate(levels)]
     lines += ['};','']
     (platform/'sound_assets.h').write_text('\n'.join(lines))
+    worker = ['// Generated exact IMA tables for the two 68000 workers.',
+              'static const uint16_t mwDelta[89][8] MW_TABLE = {']
+    for step in STEPS:
+        values=[(step>>3)+(step if code&4 else 0)+(step>>1 if code&2 else 0)+(step>>2 if code&1 else 0) for code in range(8)]
+        worker.append('{'+','.join(map(str,values))+'},')
+    worker += ['};','static const uint8_t mwNext[89][8] MW_TABLE = {']
+    for index in range(89):
+        worker.append('{'+','.join(str(max(0,min(88,index+INDEX[code]))) for code in range(8))+'},')
+    worker += ['};','']
+    (platform/'src-md/worker_tables.h').write_text('\n'.join(worker))
+    fast = ['| Generated signed deltas and next-state row offsets.']
+    for index, step in enumerate(STEPS):
+        for code in range(16):
+            diff=(step>>3)+(step if code&4 else 0)+(step>>1 if code&2 else 0)+(step>>2 if code&1 else 0)
+            fast += [f'.long {-diff if code&8 else diff}',
+                     f'.word {max(0,min(88,index+INDEX[code&7]))*128},0']
+    (platform/'src-md/worker_fast_tables.inc').write_text('\n'.join(fast)+'\n')
     stats={'sample_rate':11025,'codec':'IMA/DVI ADPCM, low nibble first','unique_effects':len(samples),'encoded_bytes':len(bank),'decoded_samples':sum(s[1] for s in samples),'source_sha256':source_hashes,'bank_sha256':hashlib.sha256(bank).hexdigest()}
     (platform/'data/sfx-manifest.json').write_text(json.dumps(stats,indent=2)+'\n')
     print(json.dumps(stats,indent=2))

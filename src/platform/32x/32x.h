@@ -164,8 +164,13 @@ extern "C"
     void fast_memcpy(void *dst, const void *src, int len);
     void fast_memset(void *dst, int value, int len);
     void CacheControl(int mode);
-    void CacheClearLine(void* ptr);
     int SetSH2SR(int level);
+}
+
+// Associative purge: invalidate any way matching this address on this SH2.
+static inline void CacheClearLine(void* ptr)
+{
+    *(volatile unsigned long*)(0x40000000 | ((unsigned long)ptr & 0x1FFFFFFF)) = 0;
 }
 
 #define CacheClear()\

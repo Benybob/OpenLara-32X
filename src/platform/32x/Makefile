@@ -6,7 +6,7 @@ TARGET = OpenLara
 BUILD = build
 SOURCES = . asm ../../fixed
 PYTHON ?= python3
-SFX_OUTPUTS = sound_assets.h data/sfx-ima.bin data/sfx-manifest.json
+SFX_OUTPUTS = sound_assets.h data/sfx-ima.bin data/sfx-manifest.json src-md/worker_tables.h src-md/worker_fast_tables.inc
 SFX_SOURCES = $(wildcard ../gba/data/*.PKD) ../../../tools/32x/pack_sfx.py
 
 $(SFX_OUTPUTS) &: $(SFX_SOURCES)
@@ -33,7 +33,8 @@ INCPATH = -I. -I../../fixed -I$(ROOTDIR)/sh-elf/include -I$(ROOTDIR)/sh-elf/sh-e
 
 OPT ?= -O2
 SHCCFLAGS = $(CPPFLAGS) -MMD -MP -D__32X__ -m2 -mb $(OPT) -Wall -Wno-class-memaccess -g -c -fno-rtti -fno-exceptions -fomit-frame-pointer -fshort-enums -frandom-seed=0
-SHLDFLAGS = -T $(LDSCRIPTSDIR)/mars.ld -Wl,-Map=$(BUILD)/output.map -nostdlib
+# Writable executable RAM is intentional on this bare-metal SH2 target.
+SHLDFLAGS = -T $(LDSCRIPTSDIR)/mars.ld -Wl,-Map=$(BUILD)/output.map,--no-warn-rwx-segments -nostdlib
 SHASFLAGS = --big
 
 MDLDFLAGS = -T $(LDSCRIPTSDIR)/md.ld --oformat binary
@@ -80,7 +81,7 @@ $(TARGET).32x: $(TARGET).elf
 $(TARGET).elf: $(OBJS) $(LDSCRIPTSDIR)/mars.ld
 	$(SHCC) $(SHLDFLAGS) $(OBJS) $(LIBS) -o $(TARGET).elf
 
-src-md/m68k.bin: $(wildcard src-md/*.c src-md/*.s) src-md/Makefile $(LDSCRIPTSDIR)/mars-md.ld
+src-md/m68k.bin: $(wildcard src-md/*.c src-md/*.s src-md/*.h src-md/*.ld) worker.h src-md/worker_tables.h src-md/worker_fast_tables.inc src-md/Makefile $(LDSCRIPTSDIR)/mars-md.ld
 	$(MAKE) -C src-md
 
 $(BUILD)/%.o: %.s
