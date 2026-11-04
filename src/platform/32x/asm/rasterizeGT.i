@@ -247,7 +247,8 @@ _rasterizeGT_asm:
         mov.l   L, @(SP_L, sp)
         mov.l   R, @(SP_R, sp)
 
-        mov.w   var_mask, mask
+        mov     #-1, mask
+        shll8   mask
         
 .scanline_start_gt:
         mov.l   Rx, @-sp        // alias Rptr
@@ -341,6 +342,11 @@ _rasterizeGT_asm:
 .block_prepare_gt:
         shll    dtdx
         shll    dgdx
+        tst     dgdx, dgdx
+        bf      .gradient_span_gt
+        bra     .constant_span_gt
+        nop
+.gradient_span_gt:
 
         // Preserve the original texture and shade sample for each pixel pair.
         add     #14, Lptr
@@ -383,6 +389,43 @@ _rasterizeGT_asm:
         cmp/gt  Lptr, Rptr
         bt/s    .block_2px_gt
         sub     dtdx, t         // [delay slot] t -= dtdx
+
+        bra     .scanline_end_gt
+        nop
+
+// A zero horizontal shade step keeps the lookup row fixed for this span.
+// UV stepping, word order and odd endpoints remain identical to the GT path.
+.constant_span_gt:
+        mov     g, LMAP
+        and     mask, LMAP
+        shll    LMAP
+        add     #6, Lptr
+        cmp/gt  Lptr, Rptr
+        bf      .constant_tail_gt
+.constant_batch_gt:
+        .rept 4
+        getUV   t, index
+        mov.b   @(index, TILE), index
+        sub     dtdx, t
+        shll    index
+        mov.w   @(index, LMAP), index
+        mov.w   index, @-Rptr
+        .endr
+        cmp/gt  Lptr, Rptr
+        bt      .constant_batch_gt
+.constant_tail_gt:
+        add     #-6, Lptr
+        cmp/gt  Lptr, Rptr
+        bf      .scanline_end_gt
+.constant_pair_gt:
+        getUV   t, index
+        mov.b   @(index, TILE), index
+        sub     dtdx, t
+        shll    index
+        mov.w   @(index, LMAP), index
+        mov.w   index, @-Rptr
+        cmp/gt  Lptr, Rptr
+        bt      .constant_pair_gt
 
 .scanline_end_gt:
         mov.l   @sp+, Rg

@@ -89,7 +89,10 @@ does not compete with audio DMA on the tested PicoDrive core. Console reset
 stops both DMA channels and PWM before reinitializing memory. A fresh CD boot
 acknowledgement prevents reusing stale readiness state after reset.
 
-See [the latest shading comparison](../../../docs/32x/shading-performance.md),
+Gouraud spans with a zero horizontal shade step now reuse one lightmap row
+through a four-pair fast loop; other spans retain the gradient loop.
+See [the constant-shade optimization](../../../docs/32x/constant-shading.md),
+[the previous shading comparison](../../../docs/32x/shading-performance.md),
 [the CPU worker report](../../../docs/32x/cpu-workers.md), the
 [audio/performance comparison](../../../docs/32x/audio-performance.md), and the
 [earlier renderer-only report](../../../docs/32x/report.md).
