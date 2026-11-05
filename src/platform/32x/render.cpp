@@ -602,8 +602,21 @@ int32 sphereIsVisible_c(int32 sx, int32 sy, int32 sz, int32 r)
     return 1;
 }
 
+#ifdef MARS_RENDER_PROFILE
+extern "C" { volatile uint32 gRenderProfile[2][4]; }
+static inline uint8 profileTick() { return *(volatile uint8*)0xFFFFFE81; }
+#endif
+
 void flush_ot(int32 bit)
 {
+#ifdef MARS_RENDER_PROFILE
+    // Emulator diagnostic: interval timer /8192, priority zero, no reset/IRQ.
+    SH2_INT_IPRA &= 0xFF0F;
+    *(volatile uint16*)0xFFFFFE80 = 0xA53F;
+    *(volatile uint16*)0xFFFFFE80 = 0x5A00;
+    uint8 tick = profileTick();
+    uint32 workTicks = 0, waitTicks = 0, buckets = 0;
+#endif
     VertexLink v[4 + 4];
     VertexLink* q = v;
     VertexLink* t = v + 4;
@@ -716,6 +729,12 @@ void flush_ot(int32 bit)
         } while (face);
 #if 1
     // sync
+#ifdef MARS_RENDER_PROFILE
+        uint8 now = profileTick();
+        workTicks += uint8(now - tick);
+        tick = now;
+        buckets++;
+#endif
         if (bit) {
             MARS_SYS_COMM6 = i;
             while (MARS_SYS_COMM2 > i);
@@ -723,8 +742,21 @@ void flush_ot(int32 bit)
             MARS_SYS_COMM2 = i;
             while (MARS_SYS_COMM6 > i);
         }
+#ifdef MARS_RENDER_PROFILE
+        now = profileTick();
+        waitTicks += uint8(now - tick);
+        tick = now;
+#endif
 #endif
     }
+#ifdef MARS_RENDER_PROFILE
+    // Each CPU owns one row; use the uncached alias for telemetry.
+    volatile uint32* stats = (volatile uint32*)((intptr_t)&gRenderProfile[bit][0] | 0x20000000);
+    stats[0] += workTicks;
+    stats[1] += waitTicks;
+    stats[2] += buckets;
+    stats[3]++;
+#endif
     CacheClear();
 }
 
@@ -862,19 +894,27 @@ extern "C" X_NOINLINE void drawPoly(uint32 flags, VertexLink* v, const ColorInde
     }
 
     VertexLink tmp[8];
-    VertexLink out[8];
+    VertexLink clipped[8];
 
     int32 pCount = (flags & FACE_TRIANGLE) ? 3 : 4;
-    int32 count = 0;
-
-    // clip x
-    CLIP_XY(x, y, 0, FRAME_WIDTH, v, tmp);
-
-    pCount = count;
-    count = 0;
-
-    // clip y
-    CLIP_XY(y, x, 0, FRAME_HEIGHT, tmp, out);
+    bool clipX = false, clipY = false;
+    for (int32 i = 0; i < pCount; i++) {
+        clipX |= v[i].v.x < 0 || v[i].v.x > FRAME_WIDTH;
+        clipY |= v[i].v.y < 0 || v[i].v.y > FRAME_HEIGHT;
+    }
+    int32 count = pCount;
+    VertexLink* out = v;
+    if (clipX) {
+        count = 0;
+        CLIP_XY(x, y, 0, FRAME_WIDTH, v, tmp);
+        out = tmp;
+    }
+    if (clipY) {
+        pCount = count;
+        count = 0;
+        CLIP_XY(y, x, 0, FRAME_HEIGHT, out, clipped);
+        out = clipped;
+    }
 
     VertexLink* first = out;
     VertexLink* last = out + count - 1;

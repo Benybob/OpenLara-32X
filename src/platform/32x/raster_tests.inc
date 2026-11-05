@@ -9,6 +9,9 @@ volatile uint32 gRasterTestMathErrors = 0;
 volatile uint32 gRasterTestShadeCases = 0;
 volatile uint32 gRasterTestShades = 2166136261u;
 
+volatile uint32 gClipTestCases = 0;
+volatile uint32 gClipTestHash = 2166136261u;
+
 void marsRasterSelfTest()
 {
     MARS_WAIT();
@@ -77,6 +80,34 @@ void marsRasterSelfTest()
         seed = seed * 1664525u + 1013904223u;
         volatile int32 d = int32(seed | 3u); // nonzero, never -1
         if (marsDivide(n, d) != n / d) gRasterTestMathErrors++;
+    }
+    const int xs[] = {-100, 0, 80, 319, 321};
+    const int ys[] = {-50, 0, 100, 223, 225};
+    const int widths[] = {20, 80, 400};
+    const int heights[] = {30, 150, 300};
+    for (int type = 0; type < 2; type++)
+    for (int tri = 0; tri < 2; tri++)
+    for (int xi = 0; xi < 5; xi++)
+    for (int yi = 0; yi < 5; yi++)
+    for (int wi = 0; wi < 3; wi++)
+    for (int hi = 0; hi < 3; hi++) {
+        fast_memset(fb, 0, FRAME_WIDTH * FRAME_HEIGHT / 4);
+        int x = xs[xi], y = ys[yi], w = widths[wi], h = heights[hi];
+        v[0].v.x = x; v[0].v.y = y;
+        v[1].v.x = x+w; v[1].v.y = y;
+        v[2].v.x = x+w; v[2].v.y = y+h;
+        v[3].v.x = x; v[3].v.y = y+h;
+        v[0].v.g = 1; v[1].v.g = 32; v[2].v.g = 21; v[3].v.g = 11;
+        v[0].t.t = 0; v[1].t.t = 0x7F000000;
+        v[2].t.t = 0x7F007F00; v[3].t.t = 0x00007F00;
+        drawPoly(((type ? FACE_TYPE_GT : FACE_TYPE_FT) << FACE_TYPE_SHIFT) |
+            (tri ? FACE_TRIANGLE : 0) | FACE_CLIPPED, v, tile);
+        const volatile uint8* pixels = (const volatile uint8*)fb;
+        uint32 hash = gClipTestHash;
+        for (int i = 0; i < FRAME_WIDTH * FRAME_HEIGHT; i++)
+            hash = (hash ^ pixels[i]) * 16777619u;
+        gClipTestHash = hash;
+        gClipTestCases++;
     }
     gRasterTestDone = 1;
 }

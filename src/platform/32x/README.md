@@ -91,7 +91,8 @@ acknowledgement prevents reusing stale readiness state after reset.
 
 Gouraud spans with a zero horizontal shade step now reuse one lightmap row
 through a four-pair fast loop; other spans retain the gradient loop.
-See [the constant-shade optimization](../../../docs/32x/constant-shading.md),
+See [clipping and CPU timing](../../../docs/32x/clipping-and-timing.md),
+[the constant-shade optimization](../../../docs/32x/constant-shading.md),
 [the previous shading comparison](../../../docs/32x/shading-performance.md),
 [the CPU worker report](../../../docs/32x/cpu-workers.md), the
 [audio/performance comparison](../../../docs/32x/audio-performance.md), and the
@@ -128,13 +129,15 @@ python3 tools/32x/compare_runs.py /tmp/original/run.json /tmp/improved/run.json
 ```
 
 To run the on-target raster regression test, clean and rebuild with
-`CPPFLAGS=-DMARS_RASTER_SELFTEST`, then run for 3600 video frames. The test stops
+`CPPFLAGS=-DMARS_RASTER_SELFTEST`, then run for 7200 video frames. The test stops
 normal gameplay after initialization, executes 2,556 textured/Gouraud span cases
 and 4,096 signed division comparisons, and leaves result symbols in SDRAM.
 Expected FT hash: `1300929039`; GT hash: `1388686019`; done: `1`; math errors:
 `0`. Another 5,112 boundary-shade cases (encoded shades 1/32, ascending/descending
 gradients, all span widths and odd endpoints) must produce `raster_shades=3137317167`.
-All 7,668 raster cases match the pinned upstream implementation.
+The 7,668 raster cases retain their upstream hashes. An additional 900
+clipped-polygon cases match v5 with `clip_hash=2151182815`; these cover FT/GT
+triangles and quads inside, outside and crossing screen boundaries.
 The same build also decodes all 592,276 effect samples: expected audio
 hash `1623845143`, audio done `1`. The hash matches an independent IMA decoder.
 The new mixer also matches the previous sample-major mixer in 320 cases with
@@ -174,3 +177,13 @@ Fault injection is test-only: `MARS_CD_STALL_TEST` stalls the fourth CD job;
 to Genesis; the latter should disable the worker and keep gameplay/SH2 audio
 running. Neither define belongs in a playable release. Always clean before
 changing build flags and rebuild without test flags for normal play.
+
+For coarse per-SH2 flush timing, clean and build with
+`CPPFLAGS=-DMARS_RENDER_PROFILE`, run a normal replay, then use
+`python3 tools/32x/profile_runs.py /path/to/run.json`. The diagnostic reads
+an 8-bit interval timer with /8192 scaling and priority zero; it measures work
+and bucket-barrier segments, not whole-CPU utilization. Single segments longer
+than one timer period (roughly 90 ms at NTSC stock clocks) can alias. Reset must
+not occur in the measured interval. This mode has measurement overhead and is
+validated only in the pinned emulator. Clean and rebuild without the flag for
+normal play; the released ROM contains no timing instrumentation.
